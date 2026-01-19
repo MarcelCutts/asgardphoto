@@ -1,0 +1,321 @@
+---
+import { getImageUrl, getSrcSet, RESPONSIVE_WIDTHS } from '../lib/images';
+
+interface Props {
+  photos: string[];
+  eventTitle: string;
+}
+
+const { photos, eventTitle } = Astro.props;
+
+// Pre-generate URLs for the lightbox (larger images)
+const lightboxUrls = photos.map((photo) =>
+  getImageUrl(photo, { width: 1600, quality: 90, format: 'auto' })
+);
+---
+
+<div class="photo-grid" role="list" aria-label={`Photos from ${eventTitle}`}>
+  {
+    photos.map((photo, index) => (
+      <figure class="photo-item" role="listitem">
+        <button
+          type="button"
+          class="photo-button"
+          data-index={index}
+          aria-label={`View photo ${index + 1} of ${photos.length}`}
+        >
+          <img
+            src={getImageUrl(photo, { width: 800, format: 'auto' })}
+            srcset={getSrcSet(photo, RESPONSIVE_WIDTHS.grid, { format: 'auto' })}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+            alt={`Photo ${index + 1} from ${eventTitle}`}
+            loading={index < 8 ? 'eager' : 'lazy'}
+            decoding="async"
+            class="photo-image"
+            width="800"
+            height="533"
+          />
+        </button>
+      </figure>
+    ))
+  }
+</div>
+
+<!-- Lightbox container -->
+<dialog id="lightbox" class="lightbox" aria-label="Photo viewer">
+  <div class="lightbox-content">
+    <button type="button" class="lightbox-close" aria-label="Close photo viewer">
+      <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path d="M18 6L6 18M6 6l12 12"></path>
+      </svg>
+    </button>
+    <button type="button" class="lightbox-prev" aria-label="Previous photo">
+      <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path d="M15 18l-6-6 6-6"></path>
+      </svg>
+    </button>
+    <div class="lightbox-image-container">
+      <img id="lightbox-image" src="" alt="Photo viewer" class="lightbox-image" />
+    </div>
+    <button type="button" class="lightbox-next" aria-label="Next photo">
+      <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path d="M9 18l6-6-6-6"></path>
+      </svg>
+    </button>
+    <div class="lightbox-counter" aria-live="polite"></div>
+  </div>
+</dialog>
+
+<script define:vars={{ photos: lightboxUrls }}>
+  const lightbox = document.getElementById('lightbox');
+  const lightboxImage = document.getElementById('lightbox-image');
+  const lightboxCounter = document.querySelector('.lightbox-counter');
+  const closeBtn = document.querySelector('.lightbox-close');
+  const prevBtn = document.querySelector('.lightbox-prev');
+  const nextBtn = document.querySelector('.lightbox-next');
+  const photoButtons = document.querySelectorAll('.photo-button');
+
+  let currentIndex = 0;
+  let previouslyFocused = null;
+
+  function updateLightbox(index) {
+    currentIndex = index;
+    lightboxImage.src = photos[index];
+    lightboxImage.alt = `Photo ${index + 1} of ${photos.length}`;
+    lightboxCounter.textContent = `${index + 1} / ${photos.length}`;
+  }
+
+  function openLightbox(index) {
+    previouslyFocused = document.activeElement;
+    updateLightbox(index);
+    lightbox.showModal();
+    closeBtn.focus();
+  }
+
+  function closeLightbox() {
+    lightbox.close();
+    if (previouslyFocused) {
+      previouslyFocused.focus();
+    }
+  }
+
+  function showPrev() {
+    const newIndex = currentIndex > 0 ? currentIndex - 1 : photos.length - 1;
+    updateLightbox(newIndex);
+  }
+
+  function showNext() {
+    const newIndex = currentIndex < photos.length - 1 ? currentIndex + 1 : 0;
+    updateLightbox(newIndex);
+  }
+
+  photoButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const index = parseInt(btn.dataset.index, 10);
+      openLightbox(index);
+    });
+  });
+
+  closeBtn.addEventListener('click', closeLightbox);
+  prevBtn.addEventListener('click', showPrev);
+  nextBtn.addEventListener('click', showNext);
+
+  lightbox.addEventListener('click', (e) => {
+    if (e.target === lightbox) {
+      closeLightbox();
+    }
+  });
+
+  lightbox.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft') {
+      showPrev();
+    } else if (e.key === 'ArrowRight') {
+      showNext();
+    } else if (e.key === 'Escape') {
+      closeLightbox();
+    } else if (e.key === 'Tab') {
+      // Focus trap: cycle through close, prev, next buttons
+      const focusableElements = [closeBtn, prevBtn, nextBtn];
+      const currentIndex = focusableElements.indexOf(document.activeElement);
+
+      if (currentIndex === -1) {
+        e.preventDefault();
+        closeBtn.focus();
+      } else if (e.shiftKey && currentIndex === 0) {
+        e.preventDefault();
+        nextBtn.focus();
+      } else if (!e.shiftKey && currentIndex === focusableElements.length - 1) {
+        e.preventDefault();
+        closeBtn.focus();
+      }
+    }
+  });
+</script>
+
+<style>
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-sm);
+    padding: var(--space-md);
+  }
+
+  @media (min-width: 768px) {
+    .photo-grid {
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: var(--space-md);
+      padding: var(--space-lg);
+    }
+  }
+
+  .photo-item {
+    margin: 0;
+  }
+
+  .photo-button {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    transition: transform var(--transition-fast);
+  }
+
+  .photo-button:hover {
+    transform: scale(1.02);
+  }
+
+  .photo-button:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .photo-button:hover {
+      transform: none;
+    }
+  }
+
+  .photo-image {
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    object-fit: cover;
+    background: var(--color-bg-elevated);
+  }
+
+  /* Lightbox styles */
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    max-width: none;
+    max-height: none;
+    padding: 0;
+    border: none;
+    background: rgba(0, 0, 0, 0.95);
+  }
+
+  .lightbox::backdrop {
+    background: transparent;
+  }
+
+  .lightbox-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .lightbox-image-container {
+    max-width: calc(100vw - 120px);
+    max-height: calc(100vh - 80px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .lightbox-image {
+    max-width: 100%;
+    max-height: calc(100vh - 80px);
+    object-fit: contain;
+  }
+
+  .lightbox-close,
+  .lightbox-prev,
+  .lightbox-next {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: white;
+    padding: var(--space-sm);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+  }
+
+  .lightbox-close:hover,
+  .lightbox-prev:hover,
+  .lightbox-next:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .lightbox-close:focus-visible,
+  .lightbox-prev:focus-visible,
+  .lightbox-next:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .lightbox-close {
+    top: var(--space-md);
+    right: var(--space-md);
+  }
+
+  .lightbox-prev {
+    left: var(--space-md);
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .lightbox-next {
+    right: var(--space-md);
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .lightbox-counter {
+    position: absolute;
+    bottom: var(--space-md);
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    font-size: 0.875rem;
+  }
+</style>

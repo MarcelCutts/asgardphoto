@@ -22,3 +22,15 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# test artifacts
+test-results/
+playwright-report/
+
+# temporary scripts
+fix-webkit-ubuntu2510.sh
+
+# Source photos - stored in Cloudflare R2, not git
+# These are large files (50MB+ each) that exceed GitHub's recommended limits
+# See: https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github
+src/assets/photos/

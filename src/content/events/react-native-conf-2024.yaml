@@ -1,0 +1,60 @@
+title: React Native Conference 2024
+date: 2024-11-15
+location: London, UK
+description: Photos from React Native Conference 2024
+# Image paths are relative to the R2 bucket root
+# Full URLs are constructed by the image helper using PUBLIC_R2_URL
+cover: rnconf2024/ReactNativeConf2024-1.jpg
+photos:
+  - rnconf2024/ReactNativeConf2024-1.jpg
+  - rnconf2024/ReactNativeConf2024-2.jpg
+  - rnconf2024/ReactNativeConf2024-3.jpg
+  - rnconf2024/ReactNativeConf2024-4.jpg
+  - rnconf2024/ReactNativeConf2024-5.jpg
+  - rnconf2024/ReactNativeConf2024-6.jpg
+  - rnconf2024/ReactNativeConf2024-7.jpg
+  - rnconf2024/ReactNativeConf2024-8.jpg
+  - rnconf2024/ReactNativeConf2024-9.jpg
+  - rnconf2024/ReactNativeConf2024-10.jpg
+  - rnconf2024/ReactNativeConf2024-11.jpg
+  - rnconf2024/ReactNativeConf2024-12.jpg
+  - rnconf2024/ReactNativeConf2024-13.jpg
+  - rnconf2024/ReactNativeConf2024-14.jpg
+  - rnconf2024/ReactNativeConf2024-15.jpg
+  - rnconf2024/ReactNativeConf2024-16.jpg
+  - rnconf2024/ReactNativeConf2024-17.jpg
+  - rnconf2024/ReactNativeConf2024-18.jpg
+  - rnconf2024/ReactNativeConf2024-19.jpg
+  - rnconf2024/ReactNativeConf2024-20.jpg
+  - rnconf2024/ReactNativeConf2024-21.jpg
+  - rnconf2024/ReactNativeConf2024-22.jpg
+  - rnconf2024/ReactNativeConf2024-23.jpg
+  - rnconf2024/ReactNativeConf2024-24.jpg
+  - rnconf2024/ReactNativeConf2024-25.jpg
+  - rnconf2024/ReactNativeConf2024-26.jpg
+  - rnconf2024/ReactNativeConf2024-27.jpg
+  - rnconf2024/ReactNativeConf2024-28.jpg
+  - rnconf2024/ReactNativeConf2024-29.jpg
+  - rnconf2024/ReactNativeConf2024-30.jpg
+  - rnconf2024/ReactNativeConf2024-31.jpg
+  - rnconf2024/ReactNativeConf2024-32.jpg
+  - rnconf2024/ReactNativeConf2024-33.jpg
+  - rnconf2024/ReactNativeConf2024-34.jpg
+  - rnconf2024/ReactNativeConf2024-35.jpg
+  - rnconf2024/ReactNativeConf2024-36.jpg
+  - rnconf2024/ReactNativeConf2024-37.jpg
+  - rnconf2024/ReactNativeConf2024-38.jpg
+  - rnconf2024/ReactNativeConf2024-39.jpg
+  - rnconf2024/ReactNativeConf2024-40.jpg
+  - rnconf2024/ReactNativeConf2024-41.jpg
+  - rnconf2024/ReactNativeConf2024-42.jpg
+  - rnconf2024/ReactNativeConf2024-43.jpg
+  - rnconf2024/ReactNativeConf2024-44.jpg
+  - rnconf2024/ReactNativeConf2024-45.jpg
+  - rnconf2024/ReactNativeConf2024-46.jpg
+  - rnconf2024/ReactNativeConf2024-47.jpg
+  - rnconf2024/ReactNativeConf2024-48.jpg
+  - rnconf2024/ReactNativeConf2024-49.jpg
+  - rnconf2024/ReactNativeConf2024-50.jpg
+  - rnconf2024/ReactNativeConf2024-51.jpg
+  - rnconf2024/ReactNativeConf2024-52.jpg

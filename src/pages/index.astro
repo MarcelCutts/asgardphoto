@@ -1,16 +1,108 @@
 ---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import EventCard from '../components/EventCard.astro';
 
+const events = await getCollection('events');
+
+// Sort events by date, newest first
+const sortedEvents = events.sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<BaseLayout
+  title="Conference Photography"
+  description="Professional photography from tech conferences and developer events."
+>
+  <section class="hero">
+    <h1>Conference Photography</h1>
+    <p class="hero-subtitle">
+      Capturing moments from tech conferences and developer events across Europe.
+    </p>
+  </section>
+
+  <section class="events-section" aria-labelledby="events-heading">
+    <h2 id="events-heading" class="visually-hidden">Events</h2>
+    {
+      sortedEvents.length > 0 ? (
+        <div class="events-grid">
+          {sortedEvents.map((event) => (
+            <EventCard
+              slug={event.id}
+              title={event.data.title}
+              date={event.data.date}
+              location={event.data.location}
+              cover={event.data.cover}
+              photoCount={event.data.photos?.length}
+            />
+          ))}
+        </div>
+      ) : (
+        <p class="no-events">No events yet. Check back soon!</p>
+      )
+    }
+  </section>
+</BaseLayout>
+
+<style>
+  .hero {
+    text-align: center;
+    padding: var(--space-xl) var(--space-lg);
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .hero h1 {
+    font-family: var(--font-display);
+    font-size: var(--font-size-3xl);
+    font-weight: 600;
+    letter-spacing: var(--letter-spacing-tight);
+    line-height: var(--line-height-tight);
+    margin-bottom: var(--space-lg);
+  }
+
+  .hero-subtitle {
+    font-size: var(--font-size-lg);
+    font-weight: 400;
+    line-height: var(--line-height-relaxed);
+    color: var(--color-text-secondary);
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .events-section {
+    padding: 0 var(--space-lg) var(--space-xl);
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .events-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--space-lg);
+  }
+
+  @media (max-width: 640px) {
+    .events-grid {
+      grid-template-columns: 1fr;
+      gap: var(--space-md);
+    }
+  }
+
+  .no-events {
+    text-align: center;
+    color: var(--color-text-muted);
+    padding: var(--space-xl);
+  }
+</style>

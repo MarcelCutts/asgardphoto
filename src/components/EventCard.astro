@@ -1,0 +1,156 @@
+---
+import { getImageUrl, getSrcSet, RESPONSIVE_WIDTHS } from '../lib/images';
+
+interface Props {
+  slug: string;
+  title: string;
+  date: Date;
+  location: string;
+  cover: string;
+  photoCount?: number;
+}
+
+const { slug, title, date, location, cover, photoCount } = Astro.props;
+
+const formattedDate = date.toLocaleDateString('en-GB', {
+  month: 'short',
+  year: 'numeric',
+});
+---
+
+<article class="event-card">
+  <a href={`/events/${slug}`} class="event-link" aria-label={`View ${title} photos`}>
+    <div class="image-container">
+      <img
+        src={getImageUrl(cover, { width: 800, format: 'auto' })}
+        srcset={getSrcSet(cover, RESPONSIVE_WIDTHS.cover, { format: 'auto' })}
+        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+        alt={`Cover photo from ${title}`}
+        loading="lazy"
+        decoding="async"
+        class="cover-image"
+        width="800"
+        height="500"
+      />
+      {photoCount && <span class="photo-count">{photoCount} photos</span>}
+    </div>
+    <div class="event-info">
+      <h2 class="event-title">{title}</h2>
+      <p class="event-meta">
+        <span class="event-location">{location}</span>
+        <span class="event-date">{formattedDate}</span>
+      </p>
+    </div>
+  </a>
+</article>
+
+<style>
+  .event-card {
+    background: var(--color-bg-elevated);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    transition:
+      transform var(--transition-normal),
+      box-shadow var(--transition-normal);
+  }
+
+  .event-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .event-card:hover {
+      transform: none;
+    }
+  }
+
+  .event-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .event-link:hover {
+    text-decoration: none;
+  }
+
+  .event-link:focus-visible {
+    outline: none;
+  }
+
+  .event-card:has(.event-link:focus-visible) {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .image-container {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+  }
+
+  .cover-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-normal);
+  }
+
+  .event-card:hover .cover-image {
+    transform: scale(1.05);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .event-card:hover .cover-image {
+      transform: none;
+    }
+  }
+
+  .photo-count {
+    position: absolute;
+    bottom: var(--space-sm);
+    right: var(--space-sm);
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    color: white;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    letter-spacing: var(--letter-spacing-wide);
+  }
+
+  .event-info {
+    padding: var(--space-md);
+  }
+
+  .event-title {
+    font-family: var(--font-display);
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    letter-spacing: var(--letter-spacing-tight);
+    line-height: var(--line-height-snug);
+    margin-bottom: var(--space-sm);
+  }
+
+  .event-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    font-size: var(--font-size-sm);
+    letter-spacing: var(--letter-spacing-wide);
+    color: var(--color-text-muted);
+  }
+
+  .event-location {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .event-date {
+    flex-shrink: 0;
+  }
+</style>

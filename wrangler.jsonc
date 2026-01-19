@@ -1,0 +1,6 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "asgardphoto",
+  "compatibility_date": "2026-01-19",
+  "pages_build_output_dir": "./dist",
+}
