@@ -3,9 +3,15 @@ interface Props {
   title: string;
   description?: string;
   ogImage?: string;
+  ogImageAlt?: string;
 }
 
-const { title, description = 'Conference photography by Asgard Photo', ogImage } = Astro.props;
+const {
+  title,
+  description = 'Conference photography by Asgard Photo',
+  ogImage,
+  ogImageAlt,
+} = Astro.props;
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 ---
 
@@ -15,7 +21,12 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="generator" content={Astro.generator} />
+    <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://photos.asgard.photo" />
+    <link rel="dns-prefetch" href="https://photos.asgard.photo" />
 
     <title>{title} | Asgard Photo</title>
     <meta name="description" content={description} />
@@ -24,15 +35,27 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:site_name" content="Asgard Photo" />
+    <meta property="og:locale" content="en_GB" />
     <meta property="og:title" content={`${title} | Asgard Photo`} />
     <meta property="og:description" content={description} />
-    {ogImage && <meta property="og:image" content={ogImage} />}
+    {
+      ogImage && (
+        <>
+          <meta property="og:image" content={ogImage} />
+          <meta property="og:image:width" content="1200" />
+          <meta property="og:image:height" content="630" />
+          {ogImageAlt && <meta property="og:image:alt" content={ogImageAlt} />}
+        </>
+      )
+    }
 
     <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
     <meta name="twitter:title" content={`${title} | Asgard Photo`} />
     <meta name="twitter:description" content={description} />
     {ogImage && <meta name="twitter:image" content={ogImage} />}
+    {ogImage && ogImageAlt && <meta name="twitter:image:alt" content={ogImageAlt} />}
   </head>
   <body>
     <a href="#main-content" class="skip-link">Skip to main content</a>

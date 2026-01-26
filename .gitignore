@@ -34,3 +34,6 @@ fix-webkit-ubuntu2510.sh
 # These are large files (50MB+ each) that exceed GitHub's recommended limits
 # See: https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github
 src/assets/photos/
+
+# Claude Code
+CLAUDE.md

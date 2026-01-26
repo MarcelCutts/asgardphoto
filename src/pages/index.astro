@@ -2,16 +2,32 @@
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import EventCard from '../components/EventCard.astro';
+import { getImageUrl } from '../lib/images';
 
 const events = await getCollection('events');
 
 // Sort events by date, newest first
 const sortedEvents = events.sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+
+// Use the most recent event's cover as the OG image for the homepage
+const ogImageUrl =
+  sortedEvents.length > 0
+    ? getImageUrl(sortedEvents[0].data.cover, {
+        width: 1200,
+        height: 630,
+        fit: 'cover',
+        format: 'jpeg',
+      })
+    : undefined;
 ---
 
 <BaseLayout
   title="Conference Photography"
-  description="Professional photography from tech conferences and developer events."
+  description="Photography from tech conferences and developer events."
+  ogImage={ogImageUrl}
+  ogImageAlt={sortedEvents.length > 0
+    ? `Cover photo from ${sortedEvents[0].data.title}`
+    : undefined}
 >
   <section class="hero">
     <h1>Conference Photography</h1>

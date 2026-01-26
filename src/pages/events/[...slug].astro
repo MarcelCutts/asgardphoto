@@ -36,6 +36,7 @@ const ogImageUrl = getImageUrl(event.data.cover, {
   description={event.data.description ||
     `Photos from ${event.data.title} at ${event.data.location}`}
   ogImage={ogImageUrl}
+  ogImageAlt={`Cover photo from ${event.data.title} at ${event.data.location}`}
 >
   <article class="event-page">
     <header class="event-header">
