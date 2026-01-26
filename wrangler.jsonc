@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "asgardphoto",
+  "account_id": "5955c8dd54db84a8f9f2a9c1487096d9",
   "compatibility_date": "2026-01-19",
   "assets": {
     "directory": "./dist",
