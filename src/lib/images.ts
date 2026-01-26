@@ -9,9 +9,8 @@
  * @see https://developers.cloudflare.com/images/transform-images/transform-via-url/
  */
 
-// R2 public URL - set this to your R2 custom domain
-// e.g., "https://photos.asgard.photo"
-const R2_BASE_URL = import.meta.env.PUBLIC_R2_URL || 'https://photos.asgard.photo';
+// R2 public URL - your R2 custom domain
+const R2_BASE_URL = 'https://photos.asgard.photo';
 
 export interface ImageTransformOptions {
   width?: number;
