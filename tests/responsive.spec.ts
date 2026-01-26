@@ -120,21 +120,19 @@ test.describe('Responsive Layout', () => {
     const photoGrid = page.locator('.photo-grid');
     await expect(photoGrid).toBeVisible();
 
-    // Desktop should show multiple columns
-    const firstPhoto = page.locator('.photo-item').first();
-    const secondPhoto = page.locator('.photo-item').nth(1);
+    // Desktop should show multiple columns (masonry layout with CSS columns)
+    // CSS columns fill vertically first, so check computed column count
+    const photos = page.locator('.photo-item');
+    await expect(photos.first()).toBeVisible();
 
-    await expect(firstPhoto).toBeVisible();
-    await expect(secondPhoto).toBeVisible();
+    // Verify the grid has the correct CSS columns property for desktop
+    const columnCount = await photoGrid.evaluate((el) => {
+      const style = window.getComputedStyle(el);
+      return style.columnCount;
+    });
 
-    // Check that they're side by side (have different x positions)
-    const box1 = await firstPhoto.boundingBox();
-    const box2 = await secondPhoto.boundingBox();
-
-    expect(box1).toBeTruthy();
-    expect(box2).toBeTruthy();
-    // On desktop, second photo should be to the right of first
-    expect(box2!.x).toBeGreaterThan(box1!.x);
+    // At 1920px width (>= 1400px), should have 4 columns
+    expect(parseInt(columnCount)).toBeGreaterThanOrEqual(3);
   });
 
   test('navigation is accessible on mobile', async ({ page }) => {

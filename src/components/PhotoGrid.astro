@@ -98,12 +98,26 @@ const lightboxUrls = photos.map((photo) =>
 
   let currentIndex = 0;
   let previouslyFocused = null;
+  let touchStartX = 0;
+  let touchStartY = 0;
 
-  function updateLightbox(index) {
+  function updateLightbox(index, direction = null) {
+    // Add fade transition when switching photos
+    if (direction) {
+      lightboxImage.classList.add('transitioning');
+    }
+
     currentIndex = index;
     lightboxImage.src = photos[index];
     lightboxImage.alt = `Photo ${index + 1} of ${photos.length}`;
     lightboxCounter.textContent = `${index + 1} / ${photos.length}`;
+
+    if (direction) {
+      // Remove transition class after animation
+      setTimeout(() => {
+        lightboxImage.classList.remove('transitioning');
+      }, 200);
+    }
   }
 
   function openLightbox(index) {
@@ -122,12 +136,12 @@ const lightboxUrls = photos.map((photo) =>
 
   function showPrev() {
     const newIndex = currentIndex > 0 ? currentIndex - 1 : photos.length - 1;
-    updateLightbox(newIndex);
+    updateLightbox(newIndex, 'prev');
   }
 
   function showNext() {
     const newIndex = currentIndex < photos.length - 1 ? currentIndex + 1 : 0;
-    updateLightbox(newIndex);
+    updateLightbox(newIndex, 'next');
   }
 
   photoButtons.forEach((btn) => {
@@ -146,6 +160,36 @@ const lightboxUrls = photos.map((photo) =>
       closeLightbox();
     }
   });
+
+  // Touch swipe support for mobile
+  lightbox.addEventListener(
+    'touchstart',
+    (e) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    },
+    { passive: true }
+  );
+
+  lightbox.addEventListener(
+    'touchend',
+    (e) => {
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      const diffX = touchStartX - touchEndX;
+      const diffY = touchStartY - touchEndY;
+
+      // Only trigger swipe if horizontal movement is greater than vertical
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+        if (diffX > 0) {
+          showNext();
+        } else {
+          showPrev();
+        }
+      }
+    },
+    { passive: true }
+  );
 
   lightbox.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft') {
@@ -174,23 +218,42 @@ const lightboxUrls = photos.map((photo) =>
 </script>
 
 <style>
+  /* Masonry layout using CSS columns for varied photo sizes */
   .photo-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: var(--space-sm);
+    columns: 1;
+    column-gap: var(--space-sm);
     padding: var(--space-md);
   }
 
-  @media (min-width: 768px) {
+  @media (min-width: 640px) {
     .photo-grid {
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: var(--space-md);
+      columns: 2;
+      column-gap: var(--space-md);
       padding: var(--space-lg);
     }
   }
 
+  @media (min-width: 1024px) {
+    .photo-grid {
+      columns: 3;
+    }
+  }
+
+  @media (min-width: 1400px) {
+    .photo-grid {
+      columns: 4;
+    }
+  }
+
   .photo-item {
-    margin: 0;
+    margin: 0 0 var(--space-sm) 0;
+    break-inside: avoid;
+  }
+
+  @media (min-width: 640px) {
+    .photo-item {
+      margin-bottom: var(--space-md);
+    }
   }
 
   .photo-button {
@@ -202,11 +265,14 @@ const lightboxUrls = photos.map((photo) =>
     cursor: pointer;
     border-radius: var(--radius-sm);
     overflow: hidden;
-    transition: transform var(--transition-fast);
+    transition:
+      transform var(--transition-fast),
+      box-shadow var(--transition-fast);
   }
 
   .photo-button:hover {
     transform: scale(1.02);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   }
 
   .photo-button:focus-visible {
@@ -222,7 +288,8 @@ const lightboxUrls = photos.map((photo) =>
 
   .photo-image {
     width: 100%;
-    aspect-ratio: 3 / 2;
+    aspect-ratio: auto;
+    height: auto;
     object-fit: cover;
     background: var(--color-bg-elevated);
   }
@@ -238,6 +305,22 @@ const lightboxUrls = photos.map((photo) =>
     padding: 0;
     border: none;
     background: rgba(0, 0, 0, 0.95);
+    animation: lightboxFadeIn 0.2s ease-out;
+  }
+
+  @keyframes lightboxFadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lightbox {
+      animation: none;
+    }
   }
 
   .lightbox::backdrop {
@@ -265,6 +348,20 @@ const lightboxUrls = photos.map((photo) =>
     max-width: 100%;
     max-height: calc(100vh - 80px);
     object-fit: contain;
+    transition: opacity 0.2s ease-out;
+  }
+
+  .lightbox-image.transitioning {
+    opacity: 0.7;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lightbox-image {
+      transition: none;
+    }
+    .lightbox-image.transitioning {
+      opacity: 1;
+    }
   }
 
   .lightbox-close,
@@ -315,7 +412,13 @@ const lightboxUrls = photos.map((photo) =>
     bottom: var(--space-md);
     left: 50%;
     transform: translateX(-50%);
+    font-family: var(--font-mono);
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(8px);
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-lg);
     color: white;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
+    letter-spacing: var(--letter-spacing-wide);
   }
 </style>

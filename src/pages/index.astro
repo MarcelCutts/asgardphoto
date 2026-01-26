@@ -2,6 +2,7 @@
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import EventCard from '../components/EventCard.astro';
+import FadeIn from '../components/FadeIn.astro';
 import { getImageUrl } from '../lib/images';
 
 const events = await getCollection('events');
@@ -30,8 +31,8 @@ const ogImageUrl =
     : undefined}
 >
   <section class="hero">
-    <h1>Conference Photography</h1>
-    <p class="hero-subtitle">Capturing moments from developer events across the world.</p>
+    <h1 class="hero-title">Asgard Photography</h1>
+    <p class="hero-subtitle">Capturing moments from events across the world.</p>
   </section>
 
   <section class="events-section" aria-labelledby="events-heading">
@@ -39,15 +40,17 @@ const ogImageUrl =
     {
       sortedEvents.length > 0 ? (
         <div class="events-grid">
-          {sortedEvents.map((event) => (
-            <EventCard
-              slug={event.id}
-              title={event.data.title}
-              date={event.data.date}
-              location={event.data.location}
-              cover={event.data.cover}
-              photoCount={event.data.photos?.length}
-            />
+          {sortedEvents.map((event, index) => (
+            <FadeIn delay={Math.min(index, 6) * 100}>
+              <EventCard
+                slug={event.id}
+                title={event.data.title}
+                date={event.data.date}
+                location={event.data.location}
+                cover={event.data.cover}
+                photoCount={event.data.photos?.length}
+              />
+            </FadeIn>
           ))}
         </div>
       ) : (
@@ -60,18 +63,19 @@ const ogImageUrl =
 <style>
   .hero {
     text-align: center;
-    padding: var(--space-xl) var(--space-lg);
-    max-width: 800px;
+    padding: var(--space-2xl) var(--space-lg) var(--space-xl);
+    max-width: 900px;
     margin: 0 auto;
   }
 
-  .hero h1 {
+  .hero-title {
     font-family: var(--font-display);
     font-size: var(--font-size-3xl);
-    font-weight: 600;
-    letter-spacing: var(--letter-spacing-tight);
+    font-weight: 700;
+    letter-spacing: var(--letter-spacing-tighter);
     line-height: var(--line-height-tight);
-    margin-bottom: var(--space-lg);
+    margin-bottom: var(--space-md);
+    animation: slideUp 0.6s ease-out both;
   }
 
   .hero-subtitle {
@@ -81,6 +85,23 @@ const ogImageUrl =
     color: var(--color-text-secondary);
     max-width: 600px;
     margin: 0 auto;
+    animation: slideUp 0.6s ease-out 0.1s both;
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(16px);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-title,
+    .hero-subtitle {
+      animation: none;
+    }
   }
 
   .events-section {

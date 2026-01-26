@@ -123,7 +123,7 @@ test.describe('Accessibility - Semantic HTML', () => {
     // Should have exactly one h1
     const h1s = page.getByRole('heading', { level: 1 });
     await expect(h1s).toHaveCount(1);
-    await expect(h1s).toHaveText('Conference Photography');
+    await expect(h1s).toHaveText('Asgard Photography');
   });
 
   test('event page has proper heading hierarchy', async ({ page }) => {
@@ -132,7 +132,7 @@ test.describe('Accessibility - Semantic HTML', () => {
     // Should have exactly one h1
     const h1s = page.getByRole('heading', { level: 1 });
     await expect(h1s).toHaveCount(1);
-    await expect(h1s).toContainText('React Native Conference');
+    await expect(h1s).toContainText('React Native Photobooth');
   });
 
   test('images have alt text', async ({ page }) => {

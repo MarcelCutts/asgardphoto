@@ -11,9 +11,7 @@ test.describe('Event Gallery', () => {
     await page.goto('/');
 
     // Check hero heading using getByRole (user-facing locator)
-    await expect(
-      page.getByRole('heading', { name: 'Conference Photography', level: 1 })
-    ).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Asgard Photography', level: 1 })).toBeVisible();
 
     // Check event card is present
     const eventCard = page.getByRole('article').first();
@@ -28,9 +26,7 @@ test.describe('Event Gallery', () => {
     await page.goto('/events/react-native-conf-2024');
 
     // Check event title
-    await expect(
-      page.getByRole('heading', { name: /React Native Conference 2024/i })
-    ).toBeVisible();
+    await expect(page.getByRole('heading', { name: /React Native Photobooth/i })).toBeVisible();
 
     // Check breadcrumb navigation
     const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' });
