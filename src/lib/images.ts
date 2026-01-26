@@ -61,7 +61,7 @@ export function getImageUrl(imagePath: string, options: ImageTransformOptions = 
  */
 export function getSrcSet(
   imagePath: string,
-  widths: number[],
+  widths: readonly number[],
   options: Omit<ImageTransformOptions, 'width'> = {}
 ): string {
   return widths.map((w) => `${getImageUrl(imagePath, { ...options, width: w })} ${w}w`).join(', ');

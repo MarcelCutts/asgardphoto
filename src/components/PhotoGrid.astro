@@ -87,7 +87,7 @@ const lightboxUrls = photos.map((photo) =>
   </div>
 </dialog>
 
-<script define:vars={{ photos: lightboxUrls }}>
+<script is:inline define:vars={{ photos: lightboxUrls }}>
   const lightbox = document.getElementById('lightbox');
   const lightboxImage = document.getElementById('lightbox-image');
   const lightboxCounter = document.querySelector('.lightbox-counter');

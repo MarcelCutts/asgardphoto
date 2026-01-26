@@ -7,7 +7,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check",
-    "lint": "eslint . && prettier --check .",
+    "lint": "astro check && eslint . && prettier --check .",
     "lint:fix": "eslint --fix . && prettier --write .",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
