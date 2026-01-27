@@ -2,7 +2,6 @@
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import EventCard from '../components/EventCard.astro';
-import FadeIn from '../components/FadeIn.astro';
 import { getImageUrl } from '../lib/images';
 
 const events = await getCollection('events');
@@ -40,17 +39,15 @@ const ogImageUrl =
     {
       sortedEvents.length > 0 ? (
         <div class="events-grid">
-          {sortedEvents.map((event, index) => (
-            <FadeIn delay={Math.min(index, 6) * 100} noAnimation={index < 2}>
-              <EventCard
-                slug={event.id}
-                title={event.data.title}
-                date={event.data.date}
-                location={event.data.location}
-                cover={event.data.cover}
-                photoCount={event.data.photos?.length}
-              />
-            </FadeIn>
+          {sortedEvents.map((event) => (
+            <EventCard
+              slug={event.id}
+              title={event.data.title}
+              date={event.data.date}
+              location={event.data.location}
+              cover={event.data.cover}
+              photoCount={event.data.photos?.length}
+            />
           ))}
         </div>
       ) : (
