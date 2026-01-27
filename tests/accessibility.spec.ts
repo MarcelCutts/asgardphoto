@@ -1,11 +1,17 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { getPhotoButton, TEST_EVENT_PHOTO_COUNT } from './fixtures';
 
 /**
  * Accessibility Tests
  * Following WCAG 2.1 AA guidelines
  * Using axe-core for automated accessibility testing
  * Docs: https://github.com/dequelabs/axe-core-npm/tree/develop/packages/playwright
+ *
+ * Locator Priority (per Playwright best practices):
+ * 1. getByRole() - First choice
+ * 2. getByText(), getByLabel() - User-facing locators
+ * 3. getByTestId() - For non-semantic elements only
  */
 
 test.describe('Accessibility - Automated', () => {
@@ -28,8 +34,8 @@ test.describe('Accessibility - Automated', () => {
   test('lightbox has no accessibility violations', async ({ page }) => {
     await page.goto('/events/react-native-conf-2024');
 
-    // Open lightbox
-    await page.locator('.photo-button').first().click();
+    // Open lightbox using helper (masonry reorders DOM)
+    await getPhotoButton(page, 0).click();
 
     const accessibilityScanResults = await new AxeBuilder({ page }).analyze();
 
@@ -41,7 +47,7 @@ test.describe('Accessibility - Keyboard Navigation', () => {
   test('can navigate to all interactive elements with Tab key', async ({ page }) => {
     await page.goto('/');
 
-    // Start from logo
+    // Start from logo (using getByRole - first choice)
     const logo = page.getByRole('link', { name: /Asgard Photo/i });
     await logo.focus();
     await expect(logo).toBeFocused();
@@ -55,8 +61,8 @@ test.describe('Accessibility - Keyboard Navigation', () => {
   test('can navigate photos with keyboard', async ({ page }) => {
     await page.goto('/events/react-native-conf-2024');
 
-    // Tab to first photo
-    const firstPhoto = page.locator('.photo-button').first();
+    // Tab to first photo and focus it
+    const firstPhoto = getPhotoButton(page, 0);
     await firstPhoto.focus();
     await expect(firstPhoto).toBeFocused();
 
@@ -66,7 +72,7 @@ test.describe('Accessibility - Keyboard Navigation', () => {
     // Lightbox should open
     await expect(page.locator('#lightbox')).toBeVisible();
 
-    // Close button should be focused
+    // Close button should be focused (using getByRole)
     const closeButton = page.getByRole('button', { name: 'Close photo viewer' });
     await expect(closeButton).toBeFocused();
   });
@@ -88,7 +94,7 @@ test.describe('Accessibility - Keyboard Navigation', () => {
   test('can close lightbox with Escape key', async ({ page }) => {
     await page.goto('/events/react-native-conf-2024');
 
-    await page.locator('.photo-button').first().click();
+    await getPhotoButton(page, 0).click();
     await expect(page.locator('#lightbox')).toBeVisible();
 
     await page.keyboard.press('Escape');
@@ -98,18 +104,18 @@ test.describe('Accessibility - Keyboard Navigation', () => {
   test('lightbox buttons have proper keyboard navigation', async ({ page }) => {
     await page.goto('/events/react-native-conf-2024');
 
-    await page.locator('.photo-button').first().click();
+    await getPhotoButton(page, 0).click();
 
-    // Close button should be focused initially
+    // Close button should be focused initially (using getByRole)
     const closeButton = page.getByRole('button', { name: 'Close photo viewer' });
     await expect(closeButton).toBeFocused();
 
-    // Tab to next button
+    // Tab to prev button
     await page.keyboard.press('Tab');
     const prevButton = page.getByRole('button', { name: 'Previous photo' });
     await expect(prevButton).toBeFocused();
 
-    // Tab to prev button
+    // Tab to next button
     await page.keyboard.press('Tab');
     const nextButton = page.getByRole('button', { name: 'Next photo' });
     await expect(nextButton).toBeFocused();
@@ -120,7 +126,7 @@ test.describe('Accessibility - Semantic HTML', () => {
   test('page has proper heading hierarchy', async ({ page }) => {
     await page.goto('/');
 
-    // Should have exactly one h1
+    // Should have exactly one h1 (using getByRole)
     const h1s = page.getByRole('heading', { level: 1 });
     await expect(h1s).toHaveCount(1);
     await expect(h1s).toHaveText('Asgard Photography');
@@ -139,13 +145,12 @@ test.describe('Accessibility - Semantic HTML', () => {
     await page.goto('/events/react-native-conf-2024');
 
     // All images should have alt attributes
+    // Using soft assertions to report all failures, not just the first
     const images = page.locator('img');
     const count = await images.count();
 
     for (let i = 0; i < count; i++) {
-      const img = images.nth(i);
-      const alt = await img.getAttribute('alt');
-      expect(alt).toBeTruthy();
+      await expect.soft(images.nth(i)).toHaveAttribute('alt', /.+/);
     }
   });
 
@@ -159,14 +164,15 @@ test.describe('Accessibility - Semantic HTML', () => {
   test('main landmark is present', async ({ page }) => {
     await page.goto('/');
 
-    const main = page.locator('main');
+    // Using getByRole for landmark
+    const main = page.getByRole('main');
     await expect(main).toBeVisible();
   });
 
   test('navigation has proper ARIA labels', async ({ page }) => {
     await page.goto('/events/react-native-conf-2024');
 
-    // Breadcrumb should have aria-label
+    // Breadcrumb should have aria-label (using getByRole with name)
     const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' });
     await expect(breadcrumb).toBeVisible();
   });
@@ -176,7 +182,7 @@ test.describe('Accessibility - ARIA Attributes', () => {
   test('lightbox dialog has proper ARIA attributes', async ({ page }) => {
     await page.goto('/events/react-native-conf-2024');
 
-    await page.locator('.photo-button').first().click();
+    await getPhotoButton(page, 0).click();
 
     const lightbox = page.locator('#lightbox');
 
@@ -187,9 +193,10 @@ test.describe('Accessibility - ARIA Attributes', () => {
   test('photo counter has aria-live for screen readers', async ({ page }) => {
     await page.goto('/events/react-native-conf-2024');
 
-    await page.locator('.photo-button').first().click();
+    await getPhotoButton(page, 0).click();
 
-    const counter = page.locator('.lightbox-counter');
+    // Using data-testid for non-semantic counter element
+    const counter = page.getByTestId('lightbox-counter');
 
     // Counter should have aria-live so screen readers announce changes
     await expect(counter).toHaveAttribute('aria-live', 'polite');
@@ -198,9 +205,9 @@ test.describe('Accessibility - ARIA Attributes', () => {
   test('lightbox buttons have descriptive aria-labels', async ({ page }) => {
     await page.goto('/events/react-native-conf-2024');
 
-    await page.locator('.photo-button').first().click();
+    await getPhotoButton(page, 0).click();
 
-    // All control buttons should have aria-labels
+    // All control buttons should have aria-labels (using getByRole)
     await expect(page.getByRole('button', { name: 'Close photo viewer' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Previous photo' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Next photo' })).toBeVisible();
@@ -209,12 +216,12 @@ test.describe('Accessibility - ARIA Attributes', () => {
   test('photo buttons have descriptive labels', async ({ page }) => {
     await page.goto('/events/react-native-conf-2024');
 
-    const firstPhotoBtn = page.locator('.photo-button').first();
+    const firstPhotoBtn = getPhotoButton(page, 0);
 
     // Should have aria-label describing the photo
     const ariaLabel = await firstPhotoBtn.getAttribute('aria-label');
     expect(ariaLabel).toContain('View photo');
-    expect(ariaLabel).toContain('1 of 52');
+    expect(ariaLabel).toContain(`1 of ${TEST_EVENT_PHOTO_COUNT}`);
   });
 });
 
@@ -222,7 +229,7 @@ test.describe('Accessibility - Focus Management', () => {
   test('focus is trapped within lightbox when open', async ({ page }) => {
     await page.goto('/events/react-native-conf-2024');
 
-    await page.locator('.photo-button').first().click();
+    await getPhotoButton(page, 0).click();
 
     // Tab through all focusable elements in lightbox
     await page.keyboard.press('Tab'); // prev button
@@ -236,7 +243,7 @@ test.describe('Accessibility - Focus Management', () => {
   test('focus returns to trigger element when lightbox closes', async ({ page }) => {
     await page.goto('/events/react-native-conf-2024');
 
-    const photoButton = page.locator('.photo-button').nth(5);
+    const photoButton = getPhotoButton(page, 5);
 
     // Open lightbox from specific button
     await photoButton.click();

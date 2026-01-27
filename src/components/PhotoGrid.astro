@@ -25,6 +25,7 @@ const lightboxImages = photos.map((photo) => ({
       640: 2,
       480: 1,
     }}
+    class="photo-grid"
     columnClass="photo-column"
   >
     {
@@ -85,7 +86,7 @@ const lightboxImages = photos.map((photo) => ({
       </svg>
     </button>
     <div class="lightbox-image-container">
-      <div class="lightbox-spinner" aria-hidden="true">
+      <div class="lightbox-spinner" aria-hidden="true" data-testid="loading-spinner">
         <svg viewBox="0 0 24 24" width="48" height="48">
           <circle
             cx="12"
@@ -111,7 +112,7 @@ const lightboxImages = photos.map((photo) => ({
         <path d="M9 18l6-6-6-6"></path>
       </svg>
     </button>
-    <div class="lightbox-counter" aria-live="polite"></div>
+    <div class="lightbox-counter" aria-live="polite" data-testid="lightbox-counter"></div>
   </div>
 </dialog>
 

@@ -21,6 +21,12 @@ export default defineConfig({
   // Reporter to use
   reporter: process.env.CI ? 'github' : 'html',
 
+  // Explicit timeouts (better than relying on defaults)
+  timeout: 30000, // 30s per test
+  expect: {
+    timeout: 5000, // 5s for assertions
+  },
+
   // Shared settings for all the projects below
   use: {
     // Base URL to use in actions like `await page.goto('/')`

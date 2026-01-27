@@ -10,6 +10,7 @@
     "lint": "astro check && eslint . && prettier --check .",
     "lint:fix": "eslint --fix . && prettier --write .",
     "test": "playwright test",
+    "test:ci": "playwright test --forbid-only",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
