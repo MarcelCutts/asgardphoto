@@ -11,7 +11,7 @@ const events = defineCollection({
     // Images are stored in Cloudflare R2 and referenced by path
     // Full URL is constructed using the R2_PUBLIC_URL environment variable
     cover: z.string(),
-    photos: z.array(z.string()).optional(),
+    photos: z.array(z.string()).min(1).optional(),
     externalUrl: z.string().url().optional(),
   }),
 });
