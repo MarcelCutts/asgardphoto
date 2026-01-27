@@ -34,6 +34,13 @@ export default defineConfig({
 
     // Video on failure
     video: 'retain-on-failure',
+
+    // Disable animations for deterministic tests
+    // This triggers prefers-reduced-motion media query, preventing
+    // flaky tests caused by animation timing differences across browsers
+    contextOptions: {
+      reducedMotion: 'reduce',
+    },
   },
 
   // Configure projects for major browsers

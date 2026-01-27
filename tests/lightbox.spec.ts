@@ -4,6 +4,9 @@ import { test, expect } from '@playwright/test';
  * Lightbox Functionality Tests
  * Testing the photo lightbox viewer with keyboard navigation
  * Following best practices for modal dialogs and keyboard interaction
+ *
+ * Note: Masonry layout rearranges DOM order, so we use data-index selectors
+ * to target specific photos by their original index.
  */
 
 test.describe('Lightbox', () => {
@@ -12,8 +15,8 @@ test.describe('Lightbox', () => {
   });
 
   test('opens lightbox when photo is clicked', async ({ page }) => {
-    // Click first photo
-    await page.locator('.photo-button').first().click();
+    // Click first photo (by data-index, not DOM order)
+    await page.locator('.photo-button[data-index="0"]').click();
 
     // Lightbox should be visible (using dialog element)
     const lightbox = page.locator('#lightbox');
@@ -28,7 +31,7 @@ test.describe('Lightbox', () => {
 
   test('closes lightbox when close button is clicked', async ({ page }) => {
     // Open lightbox
-    await page.locator('.photo-button').first().click();
+    await page.locator('.photo-button[data-index="0"]').click();
 
     // Click close button (using aria-label for accessibility)
     await page.getByRole('button', { name: 'Close photo viewer' }).click();
@@ -40,7 +43,7 @@ test.describe('Lightbox', () => {
 
   test('closes lightbox when Escape key is pressed', async ({ page }) => {
     // Open lightbox
-    await page.locator('.photo-button').first().click();
+    await page.locator('.photo-button[data-index="0"]').click();
 
     const lightbox = page.locator('#lightbox');
     await expect(lightbox).toBeVisible();
@@ -53,8 +56,8 @@ test.describe('Lightbox', () => {
   });
 
   test('navigates to next photo with arrow button', async ({ page }) => {
-    // Open lightbox
-    await page.locator('.photo-button').first().click();
+    // Open lightbox on first photo
+    await page.locator('.photo-button[data-index="0"]').click();
 
     // Click next button
     await page.getByRole('button', { name: 'Next photo' }).click();
@@ -65,7 +68,7 @@ test.describe('Lightbox', () => {
 
   test('navigates to previous photo with arrow button', async ({ page }) => {
     // Open lightbox on second photo
-    await page.locator('.photo-button').nth(1).click();
+    await page.locator('.photo-button[data-index="1"]').click();
 
     // Click previous button
     await page.getByRole('button', { name: 'Previous photo' }).click();
@@ -75,8 +78,8 @@ test.describe('Lightbox', () => {
   });
 
   test('navigates with keyboard arrow keys', async ({ page }) => {
-    // Open lightbox
-    await page.locator('.photo-button').first().click();
+    // Open lightbox on first photo
+    await page.locator('.photo-button[data-index="0"]').click();
 
     // Press right arrow key
     await page.keyboard.press('ArrowRight');
@@ -89,7 +92,7 @@ test.describe('Lightbox', () => {
 
   test('wraps around when navigating past last photo', async ({ page }) => {
     // Open lightbox on last photo
-    await page.locator('.photo-button').nth(51).click();
+    await page.locator('.photo-button[data-index="51"]').click();
 
     // Press next
     await page.getByRole('button', { name: 'Next photo' }).click();
@@ -100,7 +103,7 @@ test.describe('Lightbox', () => {
 
   test('wraps around when navigating before first photo', async ({ page }) => {
     // Open lightbox on first photo
-    await page.locator('.photo-button').first().click();
+    await page.locator('.photo-button[data-index="0"]').click();
 
     // Press previous
     await page.getByRole('button', { name: 'Previous photo' }).click();
@@ -110,7 +113,7 @@ test.describe('Lightbox', () => {
   });
 
   test('restores focus to photo button when lightbox closes', async ({ page }) => {
-    const photoButton = page.locator('.photo-button').first();
+    const photoButton = page.locator('.photo-button[data-index="0"]');
 
     // Open lightbox
     await photoButton.click();
@@ -125,7 +128,7 @@ test.describe('Lightbox', () => {
 
   test('lightbox displays correct image for clicked photo', async ({ page }) => {
     // Click third photo
-    await page.locator('.photo-button').nth(2).click();
+    await page.locator('.photo-button[data-index="2"]').click();
 
     // Should show third photo in counter
     await expect(page.locator('.lightbox-counter')).toHaveText('3 / 52');
@@ -133,5 +136,26 @@ test.describe('Lightbox', () => {
     // Image src should contain photo-3
     const lightboxImg = page.locator('#lightbox-image');
     await expect(lightboxImg).toHaveAttribute('src', /photo.*3/i);
+  });
+
+  test('lightbox has spinner element for loading states', async ({ page }) => {
+    // The spinner should exist in the DOM
+    await page.locator('.photo-button[data-index="0"]').click();
+    await expect(page.locator('.lightbox-spinner')).toBeAttached();
+  });
+
+  test('lightbox clears image when closed', async ({ page }) => {
+    // Open lightbox
+    await page.locator('.photo-button[data-index="0"]').click();
+    const lightboxImg = page.locator('#lightbox-image');
+
+    // Wait for image to load
+    await expect(lightboxImg).toHaveAttribute('src', /.+/);
+
+    // Close lightbox
+    await page.keyboard.press('Escape');
+
+    // Image src should be cleared to avoid stale content on next open
+    await expect(lightboxImg).not.toHaveAttribute('src');
   });
 });

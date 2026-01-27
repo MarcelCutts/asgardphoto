@@ -1,5 +1,6 @@
 ---
 import { getImageUrl, getSrcSet, RESPONSIVE_WIDTHS } from '../lib/images';
+import { Masonry } from 'astro-masonry';
 
 interface Props {
   photos: string[];
@@ -8,41 +9,57 @@ interface Props {
 
 const { photos, eventTitle } = Astro.props;
 
-// Pre-generate URLs for the lightbox (larger images)
-const lightboxUrls = photos.map((photo) =>
-  getImageUrl(photo, { width: 1600, quality: 90, format: 'auto' })
-);
+// Pre-generate responsive image data for the lightbox
+const lightboxImages = photos.map((photo) => ({
+  src: getImageUrl(photo, { width: 1600, quality: 90, format: 'auto' }),
+  srcset: getSrcSet(photo, RESPONSIVE_WIDTHS.lightbox, { quality: 90, format: 'auto' }),
+}));
 ---
 
-<div class="photo-grid" role="list" aria-label={`Photos from ${eventTitle}`}>
-  {
-    photos.map((photo, index) => (
-      <figure class="photo-item" role="listitem">
-        <button
-          type="button"
-          class="photo-button"
-          data-index={index}
-          aria-label={`View photo ${index + 1} of ${photos.length}`}
-        >
-          <img
-            src={getImageUrl(photo, { width: 800, format: 'auto' })}
-            srcset={getSrcSet(photo, RESPONSIVE_WIDTHS.grid, { format: 'auto' })}
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-            alt={`Photo ${index + 1} from ${eventTitle}`}
-            loading={index < 8 ? 'eager' : 'lazy'}
-            decoding="async"
-            class="photo-image"
-            width="800"
-            height="533"
-          />
-        </button>
-      </figure>
-    ))
-  }
+<div class="photo-grid-wrapper" role="list" aria-label={`Photos from ${eventTitle}`}>
+  <Masonry
+    breakpointCols={{
+      default: 4,
+      1400: 4,
+      1024: 3,
+      640: 2,
+      480: 1,
+    }}
+    class="photo-grid"
+    columnClass="photo-column"
+  >
+    {
+      photos.map((photo, index) => (
+        <figure class="photo-item" role="listitem">
+          <button
+            type="button"
+            class="photo-button"
+            data-index={index}
+            aria-label={`View photo ${index + 1} of ${photos.length}`}
+          >
+            <img
+              src={getImageUrl(photo, { width: 800, format: 'auto' })}
+              srcset={getSrcSet(photo, RESPONSIVE_WIDTHS.grid, { format: 'auto' })}
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+              alt={`Photo ${index + 1} from ${eventTitle}`}
+              loading={index < 8 ? 'eager' : 'lazy'}
+              decoding="async"
+              class="photo-image"
+            />
+          </button>
+        </figure>
+      ))
+    }
+  </Masonry>
 </div>
 
-<!-- Lightbox container -->
-<dialog id="lightbox" class="lightbox" aria-label="Photo viewer">
+<!-- Lightbox container with photos data for client-side script -->
+<dialog
+  id="lightbox"
+  class="lightbox"
+  aria-label="Photo viewer"
+  data-photos={JSON.stringify(lightboxImages)}
+>
   <div class="lightbox-content">
     <button type="button" class="lightbox-close" aria-label="Close photo viewer">
       <svg
@@ -69,7 +86,19 @@ const lightboxUrls = photos.map((photo) =>
       </svg>
     </button>
     <div class="lightbox-image-container">
-      <img id="lightbox-image" src="" alt="Photo viewer" class="lightbox-image" />
+      <div class="lightbox-spinner" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="48" height="48">
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-dasharray="31.4 31.4"></circle>
+        </svg>
+      </div>
+      <img id="lightbox-image" alt="Photo viewer" class="lightbox-image" />
     </div>
     <button type="button" class="lightbox-next" aria-label="Next photo">
       <svg
@@ -87,170 +116,213 @@ const lightboxUrls = photos.map((photo) =>
   </div>
 </dialog>
 
-<script is:inline define:vars={{ photos: lightboxUrls }}>
-  const lightbox = document.getElementById('lightbox');
-  const lightboxImage = document.getElementById('lightbox-image');
-  const lightboxCounter = document.querySelector('.lightbox-counter');
-  const closeBtn = document.querySelector('.lightbox-close');
-  const prevBtn = document.querySelector('.lightbox-prev');
-  const nextBtn = document.querySelector('.lightbox-next');
-  const photoButtons = document.querySelectorAll('.photo-button');
+<script>
+  // Lightbox initialization - runs on astro:page-load for View Transitions support
+  function initLightbox() {
+    const lightboxEl = document.getElementById('lightbox') as HTMLDialogElement | null;
+    if (!lightboxEl) return; // Not on a page with lightbox
 
-  let currentIndex = 0;
-  let previouslyFocused = null;
-  let touchStartX = 0;
-  let touchStartY = 0;
+    // Read photos data from data attribute (set at build time)
+    const photosData = lightboxEl.dataset.photos;
+    if (!photosData) return;
 
-  function updateLightbox(index, direction = null) {
-    // Add fade transition when switching photos
-    if (direction) {
-      lightboxImage.classList.add('transitioning');
+    // Non-nullable reference for use in closures
+    const lightbox = lightboxEl;
+
+    const photos: Array<{ src: string; srcset: string }> = JSON.parse(photosData);
+
+    const lightboxImage = document.getElementById('lightbox-image') as HTMLImageElement;
+    const lightboxSpinner = document.querySelector('.lightbox-spinner') as HTMLElement;
+    const lightboxCounter = document.querySelector('.lightbox-counter') as HTMLElement;
+    const closeBtn = document.querySelector('.lightbox-close') as HTMLButtonElement;
+    const prevBtn = document.querySelector('.lightbox-prev') as HTMLButtonElement;
+    const nextBtn = document.querySelector('.lightbox-next') as HTMLButtonElement;
+    const photoButtons = document.querySelectorAll('.photo-button');
+
+    let currentIndex = 0;
+    let previouslyFocused: Element | null = null;
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    // Preload cache for background preloading
+    const preloadedImages = new Set<string>();
+
+    function preloadImage(src: string) {
+      if (preloadedImages.has(src)) return;
+      preloadedImages.add(src);
+      const img = new Image();
+      img.src = src;
     }
 
-    currentIndex = index;
-    lightboxImage.src = photos[index];
-    lightboxImage.alt = `Photo ${index + 1} of ${photos.length}`;
-    lightboxCounter.textContent = `${index + 1} / ${photos.length}`;
-
-    if (direction) {
-      // Remove transition class after animation
-      setTimeout(() => {
-        lightboxImage.classList.remove('transitioning');
-      }, 200);
+    function preloadAdjacent(index: number) {
+      const nextIdx = (index + 1) % photos.length;
+      const prevIdx = (index - 1 + photos.length) % photos.length;
+      preloadImage(photos[nextIdx].src);
+      preloadImage(photos[prevIdx].src);
     }
-  }
 
-  function openLightbox(index) {
-    previouslyFocused = document.activeElement;
-    updateLightbox(index);
-    lightbox.showModal();
-    closeBtn.focus();
-  }
-
-  function closeLightbox() {
-    lightbox.close();
-    if (previouslyFocused) {
-      previouslyFocused.focus();
+    function showLoading() {
+      lightboxSpinner.classList.add('visible');
+      lightboxImage.classList.add('loading');
     }
-  }
 
-  function showPrev() {
-    const newIndex = currentIndex > 0 ? currentIndex - 1 : photos.length - 1;
-    updateLightbox(newIndex, 'prev');
-  }
+    function hideLoading() {
+      lightboxSpinner.classList.remove('visible');
+      lightboxImage.classList.remove('loading');
+    }
 
-  function showNext() {
-    const newIndex = currentIndex < photos.length - 1 ? currentIndex + 1 : 0;
-    updateLightbox(newIndex, 'next');
-  }
+    function updateLightbox(index: number) {
+      currentIndex = index;
+      lightboxCounter.textContent = `${index + 1} / ${photos.length}`;
 
-  photoButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const index = parseInt(btn.dataset.index, 10);
-      openLightbox(index);
+      const { src, srcset } = photos[index];
+
+      // Show loading state
+      showLoading();
+      lightboxImage.removeAttribute('src');
+      lightboxImage.removeAttribute('srcset');
+
+      // Set up load handler
+      const onLoad = () => {
+        hideLoading();
+        lightboxImage.removeEventListener('load', onLoad);
+        lightboxImage.removeEventListener('error', onLoad);
+      };
+      lightboxImage.addEventListener('load', onLoad);
+      lightboxImage.addEventListener('error', onLoad);
+
+      // Set the new image source with responsive srcset
+      lightboxImage.srcset = srcset;
+      lightboxImage.sizes = '100vw';
+      lightboxImage.src = src;
+      lightboxImage.alt = `Photo ${index + 1} of ${photos.length}`;
+
+      // Preload adjacent images
+      preloadAdjacent(index);
+    }
+
+    function openLightbox(index: number) {
+      previouslyFocused = document.activeElement;
+      updateLightbox(index);
+      lightbox.showModal();
+      closeBtn.focus();
+    }
+
+    function closeLightbox() {
+      lightbox.close();
+      lightboxImage.removeAttribute('src');
+      lightboxImage.removeAttribute('srcset');
+      hideLoading();
+      if (previouslyFocused && previouslyFocused instanceof HTMLElement) {
+        previouslyFocused.focus();
+      }
+    }
+
+    function showPrev() {
+      const newIndex = currentIndex > 0 ? currentIndex - 1 : photos.length - 1;
+      updateLightbox(newIndex);
+    }
+
+    function showNext() {
+      const newIndex = currentIndex < photos.length - 1 ? currentIndex + 1 : 0;
+      updateLightbox(newIndex);
+    }
+
+    // Event listeners for photo buttons
+    photoButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const index = parseInt((btn as HTMLElement).dataset.index || '0', 10);
+        openLightbox(index);
+      });
     });
-  });
 
-  closeBtn.addEventListener('click', closeLightbox);
-  prevBtn.addEventListener('click', showPrev);
-  nextBtn.addEventListener('click', showNext);
+    closeBtn.addEventListener('click', closeLightbox);
+    prevBtn.addEventListener('click', showPrev);
+    nextBtn.addEventListener('click', showNext);
 
-  lightbox.addEventListener('click', (e) => {
-    if (e.target === lightbox) {
-      closeLightbox();
-    }
-  });
+    lightbox.addEventListener('click', (e) => {
+      if (e.target === lightbox) closeLightbox();
+    });
 
-  // Touch swipe support for mobile
-  lightbox.addEventListener(
-    'touchstart',
-    (e) => {
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
-    },
-    { passive: true }
-  );
+    // Touch swipe support for mobile
+    lightbox.addEventListener(
+      'touchstart',
+      (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      },
+      { passive: true }
+    );
 
-  lightbox.addEventListener(
-    'touchend',
-    (e) => {
-      const touchEndX = e.changedTouches[0].clientX;
-      const touchEndY = e.changedTouches[0].clientY;
-      const diffX = touchStartX - touchEndX;
-      const diffY = touchStartY - touchEndY;
+    lightbox.addEventListener(
+      'touchend',
+      (e) => {
+        const diffX = touchStartX - e.changedTouches[0].clientX;
+        const diffY = touchStartY - e.changedTouches[0].clientY;
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+          if (diffX > 0) {
+            showNext();
+          } else {
+            showPrev();
+          }
+        }
+      },
+      { passive: true }
+    );
 
-      // Only trigger swipe if horizontal movement is greater than vertical
-      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
-        if (diffX > 0) {
-          showNext();
-        } else {
-          showPrev();
+    // Keyboard navigation
+    lightbox.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') showPrev();
+      else if (e.key === 'ArrowRight') showNext();
+      else if (e.key === 'Escape') closeLightbox();
+      else if (e.key === 'Tab') {
+        const focusable = [closeBtn, prevBtn, nextBtn];
+        const idx = focusable.indexOf(document.activeElement as HTMLButtonElement);
+        if (idx === -1) {
+          e.preventDefault();
+          closeBtn.focus();
+        } else if (e.shiftKey && idx === 0) {
+          e.preventDefault();
+          nextBtn.focus();
+        } else if (!e.shiftKey && idx === 2) {
+          e.preventDefault();
+          closeBtn.focus();
         }
       }
-    },
-    { passive: true }
-  );
+    });
+  }
 
-  lightbox.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowLeft') {
-      showPrev();
-    } else if (e.key === 'ArrowRight') {
-      showNext();
-    } else if (e.key === 'Escape') {
-      closeLightbox();
-    } else if (e.key === 'Tab') {
-      // Focus trap: cycle through close, prev, next buttons
-      const focusableElements = [closeBtn, prevBtn, nextBtn];
-      const currentIndex = focusableElements.indexOf(document.activeElement);
-
-      if (currentIndex === -1) {
-        e.preventDefault();
-        closeBtn.focus();
-      } else if (e.shiftKey && currentIndex === 0) {
-        e.preventDefault();
-        nextBtn.focus();
-      } else if (!e.shiftKey && currentIndex === focusableElements.length - 1) {
-        e.preventDefault();
-        closeBtn.focus();
-      }
-    }
-  });
+  // Initialize on page load (works with View Transitions / ClientRouter)
+  document.addEventListener('astro:page-load', initLightbox);
 </script>
 
 <style>
-  /* Masonry layout using CSS columns for varied photo sizes */
-  .photo-grid {
-    columns: 1;
-    column-gap: var(--space-sm);
+  .photo-grid-wrapper {
     padding: var(--space-md);
   }
 
-  @media (min-width: 640px) {
-    .photo-grid {
-      columns: 2;
-      column-gap: var(--space-md);
+  @media (min-width: 768px) {
+    .photo-grid-wrapper {
       padding: var(--space-lg);
     }
   }
 
-  @media (min-width: 1024px) {
-    .photo-grid {
-      columns: 3;
-    }
+  /* Masonry column styling */
+  :global(.photo-column) {
+    padding: 0 calc(var(--space-sm) / 2);
   }
 
-  @media (min-width: 1400px) {
-    .photo-grid {
-      columns: 4;
+  @media (min-width: 768px) {
+    :global(.photo-column) {
+      padding: 0 calc(var(--space-md) / 2);
     }
   }
 
   .photo-item {
     margin: 0 0 var(--space-sm) 0;
-    break-inside: avoid;
   }
 
-  @media (min-width: 640px) {
+  @media (min-width: 768px) {
     .photo-item {
       margin-bottom: var(--space-md);
     }
@@ -288,9 +360,8 @@ const lightboxUrls = photos.map((photo) =>
 
   .photo-image {
     width: 100%;
-    aspect-ratio: auto;
     height: auto;
-    object-fit: cover;
+    display: block;
     background: var(--color-bg-elevated);
   }
 
@@ -337,30 +408,58 @@ const lightboxUrls = photos.map((photo) =>
   }
 
   .lightbox-image-container {
+    position: relative;
     max-width: calc(100vw - 120px);
     max-height: calc(100vh - 80px);
+    min-width: 100px;
+    min-height: 100px;
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  .lightbox-spinner {
+    position: absolute;
+    color: rgba(255, 255, 255, 0.7);
+    opacity: 0;
+    transition: opacity 0.15s ease-out;
+    pointer-events: none;
+  }
+
+  .lightbox-spinner.visible {
+    opacity: 1;
+  }
+
+  .lightbox-spinner svg {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .lightbox-image {
     max-width: 100%;
     max-height: calc(100vh - 80px);
     object-fit: contain;
-    transition: opacity 0.2s ease-out;
+    transition: opacity 0.15s ease-out;
   }
 
-  .lightbox-image.transitioning {
-    opacity: 0.7;
+  .lightbox-image.loading {
+    opacity: 0;
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .lightbox-spinner svg {
+      animation: none;
+    }
     .lightbox-image {
       transition: none;
-    }
-    .lightbox-image.transitioning {
-      opacity: 1;
     }
   }
 
@@ -413,7 +512,7 @@ const lightboxUrls = photos.map((photo) =>
     left: 50%;
     transform: translateX(-50%);
     font-family: var(--font-mono);
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.7);
     backdrop-filter: blur(8px);
     padding: var(--space-xs) var(--space-md);
     border-radius: var(--radius-lg);

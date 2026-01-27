@@ -20,7 +20,8 @@
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.6.1",
-    "astro": "^5.16.8"
+    "astro": "^5.16.8",
+    "astro-masonry": "^1.2.2"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.6",

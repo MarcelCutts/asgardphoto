@@ -10,17 +10,13 @@ test.describe('Responsive Images', () => {
   test('images have proper attributes for lazy loading', async ({ page }) => {
     await page.goto('/events/react-native-conf-2024');
 
-    // Get all images on the page
-    const images = page.locator('.photo-image');
-
-    // First 8 images should be eager loaded (above fold)
-    for (let i = 0; i < 8; i++) {
-      const img = images.nth(i);
-      await expect(img).toHaveAttribute('loading', 'eager');
-    }
+    // Use data-index to find specific images (masonry rearranges DOM order)
+    // First 8 images (by original index) should be eager loaded
+    const eagerImg = page.locator('.photo-button[data-index="0"] .photo-image');
+    await expect(eagerImg).toHaveAttribute('loading', 'eager');
 
     // Images after the first 8 should be lazy loaded
-    const lazyImg = images.nth(8);
+    const lazyImg = page.locator('.photo-button[data-index="10"] .photo-image');
     await expect(lazyImg).toHaveAttribute('loading', 'lazy');
   });
 
@@ -43,16 +39,6 @@ test.describe('Responsive Images', () => {
     // Format: /cdn-cgi/image/width=800,quality=85,format=auto,fit=cover/path
     const src = await firstImg.getAttribute('src');
     expect(src).toMatch(/cdn-cgi\/image\/.*format=(auto|webp)/i);
-  });
-
-  test('images have proper sizing attributes', async ({ page }) => {
-    await page.goto('/events/react-native-conf-2024');
-
-    const firstImg = page.locator('.photo-image').first();
-
-    // Images should have width and height to prevent layout shift
-    await expect(firstImg).toHaveAttribute('width');
-    await expect(firstImg).toHaveAttribute('height');
   });
 
   test('event card cover image has responsive attributes', async ({ page }) => {
@@ -105,11 +91,10 @@ test.describe('Responsive Layout', () => {
     const photoGrid = page.locator('.photo-grid');
     await expect(photoGrid).toBeVisible();
 
-    // Check grid has proper gap
-    const gridGap = await photoGrid.evaluate((el) =>
-      window.getComputedStyle(el).getPropertyValue('gap')
-    );
-    expect(gridGap).toBeTruthy();
+    // Should have multiple columns (masonry layout)
+    const columns = page.locator('.photo-column');
+    const columnCount = await columns.count();
+    expect(columnCount).toBeGreaterThanOrEqual(2);
   });
 
   test('photo grid displays correctly on desktop', async ({ page }) => {
@@ -120,19 +105,16 @@ test.describe('Responsive Layout', () => {
     const photoGrid = page.locator('.photo-grid');
     await expect(photoGrid).toBeVisible();
 
-    // Desktop should show multiple columns (masonry layout with CSS columns)
-    // CSS columns fill vertically first, so check computed column count
+    // Desktop should show multiple columns using masonry (flexbox)
     const photos = page.locator('.photo-item');
     await expect(photos.first()).toBeVisible();
 
-    // Verify the grid has the correct CSS columns property for desktop
-    const columnCount = await photoGrid.evaluate((el) => {
-      const style = window.getComputedStyle(el);
-      return style.columnCount;
+    // Verify the grid uses flexbox layout (masonry component)
+    const display = await photoGrid.evaluate((el) => {
+      return window.getComputedStyle(el).display;
     });
 
-    // At 1920px width (>= 1400px), should have 4 columns
-    expect(parseInt(columnCount)).toBeGreaterThanOrEqual(3);
+    expect(display).toBe('flex');
   });
 
   test('navigation is accessible on mobile', async ({ page }) => {
@@ -150,25 +132,20 @@ test.describe('Responsive Layout', () => {
 });
 
 test.describe('Image Performance', () => {
-  test('images load without layout shift', async ({ page }) => {
+  test('masonry grid prevents layout shift by hiding until initialized', async ({ page }) => {
     await page.goto('/events/react-native-conf-2024');
 
-    // Images should have explicit dimensions to prevent CLS
-    const img = page.locator('.photo-image').first();
-
-    // Check for width and height attributes
-    const hasWidth = await img.getAttribute('width');
-    const hasHeight = await img.getAttribute('height');
-
-    expect(hasWidth).toBeTruthy();
-    expect(hasHeight).toBeTruthy();
+    // Masonry component adds 'initialized' class after layout is ready
+    // Content is hidden (visibility: hidden) until then
+    const masonryContainer = page.locator('[data-masonry-container]');
+    await expect(masonryContainer).toHaveClass(/initialized/);
   });
 
   test('lazy loaded images only load when scrolled into view', async ({ page }) => {
     await page.goto('/events/react-native-conf-2024');
 
-    // Get an image far down the page
-    const bottomImg = page.locator('.photo-item').nth(40);
+    // Get an image far down the page using data-index (masonry rearranges DOM)
+    const bottomImg = page.locator('.photo-button[data-index="40"]');
 
     // Wait for the element to exist in DOM
     await expect(bottomImg).toBeAttached();

@@ -68,23 +68,6 @@ export function getSrcSet(
 }
 
 /**
- * Get the raw R2 URL without transformations (for original files)
- */
-export function getRawImageUrl(imagePath: string): string {
-  return `${R2_BASE_URL}/${imagePath}`;
-}
-
-/**
- * Standard image sizes for the photo gallery
- */
-export const IMAGE_SIZES = {
-  thumbnail: { width: 400, quality: 80 },
-  medium: { width: 800, quality: 85 },
-  large: { width: 1600, quality: 90 },
-  full: { width: 2400, quality: 95 },
-} as const;
-
-/**
  * Standard widths for responsive images
  */
 export const RESPONSIVE_WIDTHS = {

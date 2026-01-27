@@ -1,7 +1,7 @@
 title: React Native Photobooth
 date: 2024-11-15
 location: London, UK
-description: Photos from React Native Conference 2024
+description: Portraits from the Asgard Photobooth at React Native
 # Image paths are relative to the R2 bucket root
 # Full URLs are constructed by the image helper using PUBLIC_R2_URL
 cover: rnconf2024/ReactNativeConf2024-1.jpg
