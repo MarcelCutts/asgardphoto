@@ -2,11 +2,12 @@
 interface Props {
   delay?: number;
   class?: string;
+  noAnimation?: boolean;
 }
-const { delay = 0, class: className = '' } = Astro.props;
+const { delay = 0, class: className = '', noAnimation = false } = Astro.props;
 ---
 
-<div class={`fade-in ${className}`} style={`--delay: ${delay}ms`}>
+<div class={`fade-in ${noAnimation ? 'visible' : ''} ${className}`} style={`--delay: ${delay}ms`}>
   <slot />
 </div>
 

@@ -41,7 +41,7 @@ const ogImageUrl =
       sortedEvents.length > 0 ? (
         <div class="events-grid">
           {sortedEvents.map((event, index) => (
-            <FadeIn delay={Math.min(index, 6) * 100}>
+            <FadeIn delay={Math.min(index, 6) * 100} noAnimation={index < 2}>
               <EventCard
                 slug={event.id}
                 title={event.data.title}
