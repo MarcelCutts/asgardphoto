@@ -3,11 +3,16 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import EventCard from '../components/EventCard.astro';
 import { getImageUrl } from '../lib/images';
+import { rollMap } from '../lib/rolls';
 
 const events = await getCollection('events');
+const rolls = rollMap(events);
 
-// Sort events by date, newest first
+// Sort events by date, newest first (roll numbers read descending)
 const sortedEvents = events.sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+
+const totalFrames = events.reduce((sum, event) => sum + (event.data.photos?.length ?? 0), 0);
+const rollCount = String(events.length).padStart(3, '0');
 
 // Use the most recent event's cover as the OG image for the homepage
 const ogImageUrl =
@@ -29,19 +34,29 @@ const ogImageUrl =
     ? `Cover photo from ${sortedEvents[0].data.title}`
     : undefined}
 >
-  <section class="hero">
-    <h1 class="hero-title">Asgard Photography</h1>
-    <p class="hero-subtitle">Capturing moments from tech events across the world.</p>
+  <section class="hero container">
+    <h1 class="wordmark">Asgard<span class="wordmark-ext">.photo</span></h1>
+    <p class="tagline">The photographic record of the tech conference circuit.</p>
+    <div class="hero-meta">
+      <span>Rolls {rollCount} &middot; Frames {totalFrames}</span>
+      <svg class="rune" viewBox="0 0 24 32" aria-hidden="true">
+        <path d="M7 2v28M7 5l13 8M7 14l13 8"></path>
+      </svg>
+    </div>
   </section>
 
-  <section class="events-section" aria-labelledby="events-heading">
-    <h2 id="events-heading" class="visually-hidden">Events</h2>
+  <section class="events-section container" aria-labelledby="events-heading">
+    <div class="events-strip">
+      <h2 id="events-heading">Index of rolls</h2>
+      <span class="events-order">Newest first</span>
+    </div>
     {
       sortedEvents.length > 0 ? (
         <div class="events-grid">
           {sortedEvents.map((event) => (
             <EventCard
               slug={event.id}
+              rollNo={rolls.get(event.id) ?? ''}
               title={event.data.title}
               date={event.data.date}
               location={event.data.location}
@@ -51,7 +66,7 @@ const ogImageUrl =
           ))}
         </div>
       ) : (
-        <p class="no-events">No events yet. Check back soon!</p>
+        <p class="no-events">No rolls filed yet.</p>
       )
     }
   </section>
@@ -59,64 +74,96 @@ const ogImageUrl =
 
 <style>
   .hero {
-    text-align: center;
-    padding: var(--space-2xl) var(--space-lg) var(--space-xl);
-    max-width: 900px;
-    margin: 0 auto;
+    padding-top: clamp(2.5rem, 6vw, 4.25rem);
+    padding-bottom: clamp(1.75rem, 4vw, 3rem);
   }
 
-  .hero-title {
-    font-family: var(--font-display);
-    font-size: var(--font-size-3xl);
-    font-weight: 700;
-    letter-spacing: var(--letter-spacing-tighter);
-    line-height: var(--line-height-tight);
-    margin-bottom: var(--space-md);
-    animation: slideUp 0.6s ease-out both;
-  }
-
-  .hero-subtitle {
-    font-size: var(--font-size-lg);
+  .wordmark {
+    font-family: var(--serif);
     font-weight: 400;
-    line-height: var(--line-height-relaxed);
-    color: var(--color-text-secondary);
-    max-width: 600px;
-    margin: 0 auto;
-    animation: slideUp 0.6s ease-out 0.1s both;
+    font-size: clamp(3.2rem, 10.5vw, 8.5rem);
+    line-height: 0.95;
+    letter-spacing: -0.015em;
+    margin-left: -0.04em;
   }
 
-  @keyframes slideUp {
-    from {
-      transform: translateY(16px);
-    }
-    to {
-      transform: translateY(0);
-    }
+  .wordmark-ext {
+    color: var(--vermilion);
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .hero-title,
-    .hero-subtitle {
-      animation: none;
+  .tagline {
+    margin-top: clamp(1rem, 2.5vw, 1.75rem);
+    max-width: 30ch;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: clamp(1.35rem, 2.6vw, 1.9rem);
+    line-height: 1.25;
+    text-wrap: balance;
+  }
+
+  .hero-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    margin-top: clamp(1.75rem, 4vw, 3rem);
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--bone-soft);
+  }
+
+  .hero-meta .rune {
+    color: var(--vermilion);
+  }
+
+  /* `rise` comes from BaseLayout's global styles */
+  @media (prefers-reduced-motion: no-preference) {
+    .wordmark {
+      animation: rise 700ms var(--ease-brand) 220ms both;
+    }
+
+    .tagline {
+      animation: rise 700ms var(--ease-brand) 340ms both;
+    }
+
+    .hero-meta {
+      animation: rise 700ms var(--ease-brand) 460ms both;
     }
   }
 
   .events-section {
-    padding: 0 var(--space-lg) var(--space-xl);
-    max-width: 1400px;
-    margin: 0 auto;
+    padding-bottom: var(--space-xl);
   }
 
-  .visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
+  .events-strip {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--rule);
+    margin-bottom: var(--space-lg);
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+  }
+
+  .events-strip h2 {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--bone);
+  }
+
+  .events-order {
+    color: var(--bone-faint);
   }
 
   .events-grid {
@@ -133,8 +180,11 @@ const ogImageUrl =
   }
 
   .no-events {
-    text-align: center;
-    color: var(--color-text-muted);
-    padding: var(--space-xl);
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--bone-soft);
+    padding: var(--space-xl) 0;
   }
 </style>

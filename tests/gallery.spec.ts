@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { TEST_EVENT_PHOTO_COUNT } from './fixtures';
+import { getPhotoImage, TEST_EVENT_PHOTO_COUNT } from './fixtures';
+import { RESPONSIVE_WIDTHS } from '../src/lib/images';
 
 /**
  * Photo Gallery Tests
@@ -15,8 +16,8 @@ test.describe('Event Gallery', () => {
   test('home page displays event cards', async ({ page }) => {
     await page.goto('/');
 
-    // Check hero heading using getByRole (user-facing locator)
-    await expect(page.getByRole('heading', { name: 'Asgard Photography', level: 1 })).toBeVisible();
+    // Check hero wordmark using getByRole (user-facing locator)
+    await expect(page.getByRole('heading', { name: 'Asgard.photo', level: 1 })).toBeVisible();
 
     // Check event card is present (article is semantic)
     const eventCard = page.getByRole('article').first();
@@ -36,11 +37,11 @@ test.describe('Event Gallery', () => {
     // Check breadcrumb navigation (using getByRole with accessible name)
     const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' });
     await expect(breadcrumb).toBeVisible();
-    await expect(breadcrumb.getByRole('link', { name: 'Events' })).toHaveAttribute('href', '/');
+    await expect(breadcrumb.getByRole('link', { name: 'Index' })).toHaveAttribute('href', '/');
 
     // Check metadata is displayed (using getByText for visible content)
     await expect(page.getByText('London, UK')).toBeVisible();
-    await expect(page.getByText(/52 photos/i)).toBeVisible();
+    await expect(page.getByText(`${TEST_EVENT_PHOTO_COUNT} frames`)).toBeVisible();
   });
 
   test('event page displays all photos', async ({ page }) => {
@@ -73,12 +74,60 @@ test.describe('Event Gallery', () => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   });
 
-  test('photo count badge displays on event card', async ({ page }) => {
+  test('frame count displays on event card', async ({ page }) => {
     await page.goto('/');
 
     const eventCard = page.getByRole('article').first();
 
-    // Look for photo count text (using getByText)
-    await expect(eventCard.getByText(/\d+ photos?/i)).toBeVisible();
+    // Look for frame count text (using getByText)
+    await expect(eventCard.getByText(/\d+ frames?/i)).toBeVisible();
+  });
+});
+
+test.describe('Image variant selection', () => {
+  // The browser should fetch the smallest srcset rendition that covers the
+  // rendered slot (rendered CSS px × devicePixelRatio) — a stale `sizes`
+  // attribute makes it download 2-4× the needed bytes.
+  const expectedVariant = (widths: readonly number[], renderedPx: number, dpr: number) =>
+    widths.find((w) => w >= renderedPx * dpr) ?? widths[widths.length - 1];
+
+  test('desktop photo grid loads the smallest rendition that covers its columns', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.goto('/events/react-native-conf-2024');
+
+    const img = getPhotoImage(page, 0);
+    await expect(img).toBeVisible();
+
+    const { rendered, dpr } = await img.evaluate((el) => ({
+      rendered: el.getBoundingClientRect().width,
+      dpr: window.devicePixelRatio,
+    }));
+    const expected = expectedVariant(RESPONSIVE_WIDTHS.grid, rendered, dpr);
+
+    await expect
+      .poll(async () => img.evaluate((el: HTMLImageElement) => el.currentSrc))
+      .toContain(`width=${expected},`);
+  });
+
+  test('desktop index covers load the smallest rendition that covers their slot', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.goto('/');
+
+    const cover = page.getByRole('article').first().getByRole('img');
+    await expect(cover).toBeVisible();
+
+    const { rendered, dpr } = await cover.evaluate((el) => ({
+      rendered: el.getBoundingClientRect().width,
+      dpr: window.devicePixelRatio,
+    }));
+    const expected = expectedVariant(RESPONSIVE_WIDTHS.cover, rendered, dpr);
+
+    await expect
+      .poll(async () => cover.evaluate((el: HTMLImageElement) => el.currentSrc))
+      .toContain(`width=${expected},`);
   });
 });

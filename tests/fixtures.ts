@@ -28,6 +28,14 @@ export const test = base.extend({
 export { expect };
 
 /**
+ * Lightbox frame counter format ("FR. 12 / 52").
+ * Keep in sync with the counter template in PhotoGrid.astro.
+ */
+export function frameCounter(current: number, total: number): string {
+  return `FR. ${current} / ${total}`;
+}
+
+/**
  * Helper to get a specific photo button by its original index.
  *
  * Why use data-index instead of getByRole?

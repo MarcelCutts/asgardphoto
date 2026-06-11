@@ -3,21 +3,23 @@ import { getCollection, render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PhotoGrid from '../../components/PhotoGrid.astro';
 import { getImageUrl } from '../../lib/images';
+import { rollMap } from '../../lib/rolls';
 
 export async function getStaticPaths() {
   const events = await getCollection('events');
+  const rolls = rollMap(events);
   return events.map((event) => ({
     params: { slug: event.id },
-    props: { event },
+    props: { event, rollNo: rolls.get(event.id) ?? '' },
   }));
 }
 
-const { event } = Astro.props;
+const { event, rollNo } = Astro.props;
 const { Content } = await render(event);
 
 const formattedDate = event.data.date.toLocaleDateString('en-GB', {
-  day: 'numeric',
-  month: 'long',
+  day: '2-digit',
+  month: 'short',
   year: 'numeric',
 });
 
@@ -39,82 +41,55 @@ const ogImageUrl = getImageUrl(event.data.cover, {
   ogImageAlt={`Cover photo from ${event.data.title} at ${event.data.location}`}
 >
   <article class="event-page">
-    <header class="event-header">
+    <header class="event-header container">
       <nav class="breadcrumb" aria-label="Breadcrumb">
-        <a href="/">Events</a>
+        <a href="/">Index</a>
         <span aria-hidden="true">/</span>
         <span aria-current="page">{event.data.title}</span>
       </nav>
 
-      <h1>{event.data.title}</h1>
+      <div class="roll-head">
+        <p class="roll-no">{rollNo}</p>
 
-      <div class="event-meta">
-        <span class="meta-item">
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            aria-hidden="true"
-          >
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-            <circle cx="12" cy="10" r="3"></circle>
-          </svg>
-          {event.data.location}
-        </span>
-        <span class="meta-item">
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            aria-hidden="true"
-          >
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="16" y1="2" x2="16" y2="6"></line>
-            <line x1="8" y1="2" x2="8" y2="6"></line>
-            <line x1="3" y1="10" x2="21" y2="10"></line>
-          </svg>
-          <time datetime={event.data.date.toISOString()}>{formattedDate}</time>
-        </span>
-        {
-          photos.length > 0 && (
-            <span class="meta-item">
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                aria-hidden="true"
-              >
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                <circle cx="8.5" cy="8.5" r="1.5" />
-                <polyline points="21 15 16 10 5 21" />
-              </svg>
-              {photos.length} photos
-            </span>
-          )
-        }
-      </div>
+        <div class="roll-body">
+          <h1>{event.data.title}</h1>
 
-      {event.data.description && <p class="event-description">{event.data.description}</p>}
+          <p class="event-meta">
+            <span class="event-location">{event.data.location}</span>
+            <span aria-hidden="true">&middot;</span>
+            <time datetime={event.data.date.toISOString()}>{formattedDate}</time>
+            {
+              photos.length > 0 && (
+                <>
+                  <span aria-hidden="true">&middot;</span>
+                  <span>
+                    {photos.length} frame{photos.length === 1 ? '' : 's'}
+                  </span>
+                </>
+              )
+            }
+          </p>
 
-      <div class="event-content">
-        <Content />
+          {event.data.description && <p class="event-description">{event.data.description}</p>}
+
+          <div class="event-content">
+            <Content />
+          </div>
+        </div>
       </div>
     </header>
 
     {
       photos.length > 0 ? (
-        <PhotoGrid photos={photos} eventTitle={event.data.title} />
+        <div class="contact-sheet container">
+          <div class="sheet-strip">
+            <span class="sheet-label">Contact sheet</span>
+            <span class="sheet-roll">{rollNo}</span>
+          </div>
+          <PhotoGrid photos={photos} eventTitle={event.data.title} />
+        </div>
       ) : (
-        <p class="no-photos">Photos coming soon.</p>
+        <p class="no-photos container">Frames pending development.</p>
       )
     }
   </article>
@@ -139,90 +114,172 @@ const ogImageUrl = getImageUrl(event.data.cover, {
 </BaseLayout>
 
 <style>
-  .event-page {
-    min-height: 100vh;
-  }
-
   .event-header {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: var(--space-lg);
-    text-align: center;
+    padding-top: clamp(1.5rem, 4vw, 2.75rem);
   }
 
   .breadcrumb {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-sm);
-    margin-bottom: var(--space-xl);
-    font-size: var(--font-size-sm);
-    letter-spacing: var(--letter-spacing-wide);
-    color: var(--color-text-muted);
+    align-items: baseline;
+    gap: 0.6em;
+    margin-bottom: clamp(1.75rem, 4vw, 3rem);
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--bone-soft);
   }
 
   .breadcrumb a {
-    color: var(--color-text-muted);
-    text-decoration: none;
-    transition: color var(--transition-fast);
+    transition: color 160ms ease;
   }
 
   .breadcrumb a:hover {
-    color: var(--color-accent);
+    color: var(--vermilion);
+  }
+
+  .breadcrumb [aria-current='page'] {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Roll header on the rail, mirroring the parent section anatomy */
+  .roll-head {
+    display: grid;
+    grid-template-columns: var(--rail) minmax(0, 1fr);
+    column-gap: clamp(1rem, 3vw, 2.5rem);
+  }
+
+  .roll-no {
+    grid-column: 1;
+    font-family: var(--mono);
+    font-size: 0.95rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--vermilion);
+    padding-top: 0.55em;
+  }
+
+  .roll-no::after {
+    content: '';
+    display: block;
+    width: 1.75rem;
+    height: 1px;
+    margin-top: 0.6rem;
+    background: var(--rule-faint);
+  }
+
+  .roll-body {
+    grid-column: 2;
+    min-width: 0;
   }
 
   h1 {
-    font-family: var(--font-display);
-    font-size: var(--font-size-3xl);
-    font-weight: 600;
-    letter-spacing: var(--letter-spacing-tight);
-    line-height: var(--line-height-tight);
-    margin-bottom: var(--space-lg);
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(2.6rem, 6vw, 4rem);
+    line-height: 1.02;
+    letter-spacing: -0.01em;
   }
 
   .event-meta {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
-    gap: var(--space-lg);
-    margin-bottom: var(--space-xl);
-    color: var(--color-text-muted);
-  }
-
-  .meta-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-    font-size: var(--font-size-sm);
-    letter-spacing: var(--letter-spacing-wide);
-  }
-
-  .meta-item svg {
-    flex-shrink: 0;
+    align-items: baseline;
+    gap: 0.6em;
+    margin-top: var(--space-sm);
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--bone-soft);
   }
 
   .event-description {
-    font-size: var(--font-size-lg);
-    line-height: var(--line-height-relaxed);
-    color: var(--color-text-secondary);
-    max-width: 600px;
-    margin: 0 auto var(--space-lg);
+    margin-top: var(--space-md);
+    max-width: var(--measure);
+    font-size: 1.04rem;
+    color: var(--bone-soft);
   }
 
   .event-content {
-    margin-top: var(--space-lg);
+    margin-top: var(--space-sm);
   }
 
   .event-content :global(p) {
-    font-size: var(--font-size-base);
-    line-height: var(--line-height-relaxed);
-    color: var(--color-text-secondary);
-    margin-bottom: var(--space-sm);
+    max-width: var(--measure);
+    font-size: 1.04rem;
+    line-height: 1.65;
+    color: var(--bone-soft);
+  }
+
+  .event-content :global(p + p) {
+    margin-top: var(--space-sm);
+  }
+
+  /* Markdown-authored bodies (the collection glob accepts .md); the global
+     `a { color: inherit }` reset would otherwise leave these unmarked */
+  .event-content :global(a) {
+    color: var(--vermilion);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+    text-decoration-color: var(--rule);
+    transition: text-decoration-color 160ms ease;
+  }
+
+  .event-content :global(a:hover) {
+    text-decoration-color: var(--vermilion);
+  }
+
+  .contact-sheet {
+    margin-top: clamp(1.75rem, 4vw, 3rem);
+  }
+
+  .sheet-strip {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--bone);
+  }
+
+  .sheet-roll {
+    font-weight: 400;
+    color: var(--bone-faint);
   }
 
   .no-photos {
-    text-align: center;
-    color: var(--color-text-muted);
-    padding: var(--space-xl);
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--bone-soft);
+    /* padding-block only: the shorthand would zero .container's gutter */
+    padding-block: var(--space-xl);
+  }
+
+  @media (max-width: 720px) {
+    .roll-head {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .roll-no {
+      grid-column: 1;
+      padding-top: 0;
+      margin-bottom: 0.75rem;
+    }
+
+    .roll-body {
+      grid-column: 1;
+    }
   }
 </style>

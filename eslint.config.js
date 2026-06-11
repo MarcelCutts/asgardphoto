@@ -32,12 +32,13 @@ export default [
       },
     },
   },
-  // Playwright test files - window is used inside page.evaluate() browser context
+  // Playwright test files - window/DOM types are used inside page.evaluate() browser context
   {
     files: ['tests/**/*.ts'],
     languageOptions: {
       globals: {
         window: 'readonly',
+        HTMLImageElement: 'readonly',
       },
     },
   },

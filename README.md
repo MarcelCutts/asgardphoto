@@ -6,7 +6,7 @@ Conference photography portfolio website built with Astro and Cloudflare.
 
 - Responsive photo gallery with native `<dialog>` lightbox
 - On-demand image optimization via Cloudflare Image Resizing (WebP/AVIF, multiple sizes)
-- Dark/light mode based on system preference
+- "The Archive" design system — dark-only sibling of [asgard.tech](https://asgard.tech), with self-hosted Instrument Serif / Schibsted Grotesk / IBM Plex Mono
 - Accessibility-first design (WCAG 2.1 AA compliant)
 - SEO optimized (Open Graph, JSON-LD structured data, sitemap)
 - Zero JavaScript by default (except lightbox interactivity)

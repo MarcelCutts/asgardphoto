@@ -1,4 +1,11 @@
-import { test, expect, getPhotoButton, TEST_EVENT_PHOTO_COUNT, TEST_EVENT_SLUG } from './fixtures';
+import {
+  test,
+  expect,
+  frameCounter,
+  getPhotoButton,
+  TEST_EVENT_PHOTO_COUNT,
+  TEST_EVENT_SLUG,
+} from './fixtures';
 
 /**
  * Lightbox Functionality Tests
@@ -26,7 +33,9 @@ test.describe('Lightbox', () => {
     await expect(lightbox.locator('#lightbox-image')).toBeVisible();
 
     // Counter should show current position (using data-testid for non-semantic element)
-    await expect(page.getByTestId('lightbox-counter')).toHaveText(`1 / ${TEST_EVENT_PHOTO_COUNT}`);
+    await expect(page.getByTestId('lightbox-counter')).toHaveText(
+      frameCounter(1, TEST_EVENT_PHOTO_COUNT)
+    );
   });
 
   test('closes lightbox when close button is clicked', async ({ page }) => {
@@ -54,7 +63,9 @@ test.describe('Lightbox', () => {
     // Using getByRole for button with accessible name
     await page.getByRole('button', { name: 'Next photo' }).click();
 
-    await expect(page.getByTestId('lightbox-counter')).toHaveText(`2 / ${TEST_EVENT_PHOTO_COUNT}`);
+    await expect(page.getByTestId('lightbox-counter')).toHaveText(
+      frameCounter(2, TEST_EVENT_PHOTO_COUNT)
+    );
   });
 
   test('navigates to previous photo with arrow button', async ({ page }) => {
@@ -62,17 +73,23 @@ test.describe('Lightbox', () => {
 
     await page.getByRole('button', { name: 'Previous photo' }).click();
 
-    await expect(page.getByTestId('lightbox-counter')).toHaveText(`1 / ${TEST_EVENT_PHOTO_COUNT}`);
+    await expect(page.getByTestId('lightbox-counter')).toHaveText(
+      frameCounter(1, TEST_EVENT_PHOTO_COUNT)
+    );
   });
 
   test('navigates with keyboard arrow keys', async ({ page }) => {
     await getPhotoButton(page, 0).click();
 
     await page.keyboard.press('ArrowRight');
-    await expect(page.getByTestId('lightbox-counter')).toHaveText(`2 / ${TEST_EVENT_PHOTO_COUNT}`);
+    await expect(page.getByTestId('lightbox-counter')).toHaveText(
+      frameCounter(2, TEST_EVENT_PHOTO_COUNT)
+    );
 
     await page.keyboard.press('ArrowLeft');
-    await expect(page.getByTestId('lightbox-counter')).toHaveText(`1 / ${TEST_EVENT_PHOTO_COUNT}`);
+    await expect(page.getByTestId('lightbox-counter')).toHaveText(
+      frameCounter(1, TEST_EVENT_PHOTO_COUNT)
+    );
   });
 
   test('wraps around when navigating past last photo', async ({ page }) => {
@@ -80,7 +97,9 @@ test.describe('Lightbox', () => {
 
     await page.getByRole('button', { name: 'Next photo' }).click();
 
-    await expect(page.getByTestId('lightbox-counter')).toHaveText(`1 / ${TEST_EVENT_PHOTO_COUNT}`);
+    await expect(page.getByTestId('lightbox-counter')).toHaveText(
+      frameCounter(1, TEST_EVENT_PHOTO_COUNT)
+    );
   });
 
   test('wraps around when navigating before first photo', async ({ page }) => {
@@ -89,7 +108,7 @@ test.describe('Lightbox', () => {
     await page.getByRole('button', { name: 'Previous photo' }).click();
 
     await expect(page.getByTestId('lightbox-counter')).toHaveText(
-      `${TEST_EVENT_PHOTO_COUNT} / ${TEST_EVENT_PHOTO_COUNT}`
+      frameCounter(TEST_EVENT_PHOTO_COUNT, TEST_EVENT_PHOTO_COUNT)
     );
   });
 
@@ -106,7 +125,9 @@ test.describe('Lightbox', () => {
   test('lightbox displays correct image for clicked photo', async ({ page }) => {
     await getPhotoButton(page, 2).click();
 
-    await expect(page.getByTestId('lightbox-counter')).toHaveText(`3 / ${TEST_EVENT_PHOTO_COUNT}`);
+    await expect(page.getByTestId('lightbox-counter')).toHaveText(
+      frameCounter(3, TEST_EVENT_PHOTO_COUNT)
+    );
 
     // Image src should contain photo-3
     const lightboxImg = page.locator('#lightbox-image');
