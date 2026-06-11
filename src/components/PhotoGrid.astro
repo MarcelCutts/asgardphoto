@@ -135,6 +135,7 @@ const lightboxImages = photos.map((photo) => ({
     const photos: Array<{ src: string; srcset: string }> = JSON.parse(photosData);
 
     const lightboxImage = document.getElementById('lightbox-image') as HTMLImageElement;
+    const lightboxContent = document.querySelector('.lightbox-content') as HTMLElement;
     const lightboxSpinner = document.querySelector('.lightbox-spinner') as HTMLElement;
     const lightboxCounter = document.querySelector('.lightbox-counter') as HTMLElement;
     const closeBtn = document.querySelector('.lightbox-close') as HTMLButtonElement;
@@ -213,12 +214,6 @@ const lightboxImages = photos.map((photo) => ({
 
     function closeLightbox() {
       lightbox.close();
-      lightboxImage.removeAttribute('src');
-      lightboxImage.removeAttribute('srcset');
-      hideLoading();
-      if (previouslyFocused && previouslyFocused instanceof HTMLElement) {
-        previouslyFocused.focus();
-      }
     }
 
     function showPrev() {
@@ -243,8 +238,22 @@ const lightboxImages = photos.map((photo) => ({
     prevBtn.addEventListener('click', showPrev);
     nextBtn.addEventListener('click', showNext);
 
+    // Teardown lives on the close event so every dismissal runs it — the
+    // close button, Escape (native cancel), and Android's back gesture /
+    // CloseWatcher, which never touch the keydown handler.
+    lightbox.addEventListener('close', () => {
+      lightboxImage.removeAttribute('src');
+      lightboxImage.removeAttribute('srcset');
+      hideLoading();
+      if (previouslyFocused && previouslyFocused instanceof HTMLElement) {
+        previouslyFocused.focus();
+      }
+    });
+
     lightbox.addEventListener('click', (e) => {
-      if (e.target === lightbox) closeLightbox();
+      // The content div covers the whole zero-padding dialog, so its dark
+      // margin is the backdrop; the image, buttons and counter are children.
+      if (e.target === lightbox || e.target === lightboxContent) closeLightbox();
     });
 
     // Touch swipe support for mobile
@@ -274,10 +283,10 @@ const lightboxImages = photos.map((photo) => ({
     );
 
     // Keyboard navigation
+    // Escape is absent on purpose: showModal()'s native cancel handles it
     lightbox.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowLeft') showPrev();
       else if (e.key === 'ArrowRight') showNext();
-      else if (e.key === 'Escape') closeLightbox();
       else if (e.key === 'Tab') {
         const focusable = [closeBtn, prevBtn, nextBtn];
         const idx = focusable.indexOf(document.activeElement as HTMLButtonElement);
@@ -363,6 +372,14 @@ const lightboxImages = photos.map((photo) => ({
     border: none;
     background: rgba(22, 19, 13, 0.96);
     color: var(--bone);
+    overscroll-behavior: contain;
+  }
+
+  /* Hold the page still while the lightbox is modal; the dialog has no
+     scrollable overflow, so wheel/touch would chain to the document and
+     the user would land at a different scroll position on close. */
+  :global(body:has(dialog[open])) {
+    overflow: hidden;
   }
 
   @media (prefers-reduced-motion: no-preference) {

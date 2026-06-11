@@ -38,7 +38,9 @@ export default [
     languageOptions: {
       globals: {
         window: 'readonly',
+        document: 'readonly',
         HTMLImageElement: 'readonly',
+        HTMLDialogElement: 'readonly',
       },
     },
   },

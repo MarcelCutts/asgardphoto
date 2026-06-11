@@ -152,4 +152,47 @@ test.describe('Lightbox', () => {
     // Image src should be cleared to avoid stale content on next open
     await expect(lightboxImg).not.toHaveAttribute('src');
   });
+
+  test('closes when the backdrop beside the photo is clicked', async ({ page }) => {
+    await getPhotoButton(page, 0).click();
+
+    const lightbox = page.locator('#lightbox');
+    await expect(lightbox).toBeVisible();
+
+    // Dark area top-left: clear of the image (centered), the close button
+    // (top-right), and the prev arrow (vertically centered at the left edge)
+    await page.mouse.click(40, 100);
+
+    await expect(lightbox).not.toBeVisible();
+  });
+
+  test('clears image when dismissed natively (back gesture / CloseWatcher)', async ({ page }) => {
+    await getPhotoButton(page, 0).click();
+    const lightboxImg = page.locator('#lightbox-image');
+    await expect(lightboxImg).toHaveAttribute('src', /.+/);
+
+    // dialog.close() without a keydown is what Android's back gesture does;
+    // teardown must not depend on the Escape handler
+    await page.evaluate(() => {
+      (document.getElementById('lightbox') as HTMLDialogElement).close();
+    });
+
+    await expect(page.locator('#lightbox')).not.toBeVisible();
+    await expect(lightboxImg).not.toHaveAttribute('src');
+  });
+
+  test('keeps the page from scrolling behind the open lightbox', async ({ page }) => {
+    await getPhotoButton(page, 0).click();
+    await expect(page.locator('#lightbox')).toBeVisible();
+
+    const before = await page.evaluate(() => window.scrollY);
+
+    // Wheel over the non-scrollable dialog: without a scroll lock this
+    // chains to the document and the page drifts behind the overlay
+    await page.mouse.move(200, 300);
+    await page.mouse.wheel(0, 800);
+    await page.waitForTimeout(250);
+
+    expect(await page.evaluate(() => window.scrollY)).toBe(before);
+  });
 });
