@@ -3,6 +3,17 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
 <BaseLayout title="Frame not found" description="This page is not in the archive.">
+  <Fragment slot="head">
+    <!-- The lede is serif italic, above the fold -->
+    <link
+      rel="preload"
+      href="/fonts/InstrumentSerif-Italic.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+  </Fragment>
+
   <section class="notfound container">
     <p class="notfound-code">R—404</p>
     <h1>Frame not found.</h1>

@@ -34,6 +34,17 @@ const ogImageUrl =
     ? `Cover photo from ${sortedEvents[0].data.title}`
     : undefined}
 >
+  <Fragment slot="head">
+    <!-- The hero tagline is serif italic, above the fold -->
+    <link
+      rel="preload"
+      href="/fonts/InstrumentSerif-Italic.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+  </Fragment>
+
   <section class="hero container">
     <h1 class="wordmark">Asgard<span class="wordmark-ext">.photo</span></h1>
     <p class="tagline">The photographic record of the tech conference circuit.</p>
