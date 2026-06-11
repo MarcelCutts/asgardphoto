@@ -82,6 +82,21 @@ test.describe('Event Gallery', () => {
     // Look for frame count text (using getByText)
     await expect(eventCard.getByText(/\d+ frames?/i)).toBeVisible();
   });
+
+  test('masthead persists across client-side navigation', async ({ page }) => {
+    await page.goto('/');
+
+    // Tag the live node: transition:persist must carry it through the
+    // ClientRouter swap (so its entrance animation doesn't replay per nav)
+    await page
+      .locator('header.masthead')
+      .evaluate((el) => el.setAttribute('data-persist-probe', '1'));
+
+    await page.getByRole('article').first().getByRole('link').click();
+    await expect(page).toHaveURL(/\/events\/.+/);
+
+    await expect(page.locator('header.masthead')).toHaveAttribute('data-persist-probe', '1');
+  });
 });
 
 test.describe('Image variant selection', () => {

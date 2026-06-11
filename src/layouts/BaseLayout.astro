@@ -89,10 +89,10 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
   </head>
   <body>
     <a href="#main-content" class="skip-link">Skip to main content</a>
-    <header class="masthead">
+    <header class="masthead" transition:persist="masthead">
       <div class="container">
         <div class="scotch"></div>
-        <nav aria-label="Main navigation" class="masthead-meta">
+        <nav aria-label="Main navigation" class="masthead-meta apparatus">
           <a href="/" class="masthead-home"><strong>Asgard Photo</strong></a>
           <span class="masthead-mid">Conference photography</span>
           <a href="https://asgard.tech" class="masthead-ext">Asgard.tech</a>
@@ -105,7 +105,7 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
     </main>
 
     <footer class="colophon">
-      <div class="container colophon-row">
+      <div class="container colophon-row apparatus">
         <span>Asgard Enterprises Limited &middot; Est. MMXVII</span>
         <svg class="rune" viewBox="0 0 24 32" aria-hidden="true">
           <path d="M7 2v28M7 5l13 8M7 14l13 8"></path>
@@ -375,10 +375,6 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
     gap: var(--space-sm);
     padding-block: 0.7rem;
     border-bottom: 1px solid var(--rule);
-    font-family: var(--mono);
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.09em;
     color: var(--bone-soft);
   }
 
@@ -412,10 +408,6 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
     align-items: center;
     justify-content: space-between;
     gap: var(--space-sm);
-    font-family: var(--mono);
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.09em;
     color: var(--bone-soft);
   }
 

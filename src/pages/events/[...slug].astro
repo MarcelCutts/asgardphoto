@@ -53,7 +53,7 @@ const ogImageUrl = getImageUrl(event.data.cover, {
 
   <article class="event-page">
     <header class="event-header container">
-      <nav class="breadcrumb" aria-label="Breadcrumb">
+      <nav class="breadcrumb apparatus" aria-label="Breadcrumb">
         <a href="/">Index</a>
         <span aria-hidden="true">/</span>
         <span aria-current="page">{event.data.title}</span>
@@ -65,7 +65,7 @@ const ogImageUrl = getImageUrl(event.data.cover, {
         <div class="roll-body">
           <h1>{event.data.title}</h1>
 
-          <p class="event-meta">
+          <p class="event-meta apparatus">
             <span class="event-location">{event.data.location}</span>
             <span aria-hidden="true">&middot;</span>
             <time datetime={event.data.date.toISOString()}>{formattedDate}</time>
@@ -93,7 +93,7 @@ const ogImageUrl = getImageUrl(event.data.cover, {
     {
       photos.length > 0 ? (
         <div class="contact-sheet container">
-          <div class="sheet-strip">
+          <div class="sheet-strip apparatus">
             <span class="sheet-label">Contact sheet</span>
             <span class="sheet-roll">{rollNo}</span>
           </div>
@@ -134,10 +134,6 @@ const ogImageUrl = getImageUrl(event.data.cover, {
     align-items: baseline;
     gap: 0.6em;
     margin-bottom: clamp(1.75rem, 4vw, 3rem);
-    font-family: var(--mono);
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.09em;
     color: var(--bone-soft);
   }
 
@@ -200,10 +196,6 @@ const ogImageUrl = getImageUrl(event.data.cover, {
     align-items: baseline;
     gap: 0.6em;
     margin-top: var(--space-sm);
-    font-family: var(--mono);
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.09em;
     color: var(--bone-soft);
   }
 
@@ -255,11 +247,7 @@ const ogImageUrl = getImageUrl(event.data.cover, {
     gap: var(--space-sm);
     padding-top: 0.7rem;
     border-top: 1px solid var(--rule);
-    font-family: var(--mono);
-    font-size: 0.72rem;
     font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.09em;
     color: var(--bone);
   }
 

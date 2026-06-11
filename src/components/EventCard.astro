@@ -35,7 +35,7 @@ const formattedDate = date.toLocaleDateString('en-GB', {
       />
     </div>
     <div class="caption">
-      <p class="caption-index">
+      <p class="caption-index apparatus">
         <span class="caption-roll">{rollNo}</span>
         {
           photoCount != null && (
@@ -46,7 +46,7 @@ const formattedDate = date.toLocaleDateString('en-GB', {
         }
       </p>
       <h2 class="caption-title">{title}</h2>
-      <p class="caption-meta">
+      <p class="caption-meta apparatus">
         <span class="caption-location">{location}</span>
         <span class="caption-date">{formattedDate}</span>
       </p>
@@ -100,11 +100,7 @@ const formattedDate = date.toLocaleDateString('en-GB', {
     display: flex;
     align-items: baseline;
     gap: 0.6em;
-    font-family: var(--mono);
-    font-size: 0.72rem;
     font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.09em;
     color: var(--bone-faint);
   }
 
@@ -136,10 +132,6 @@ const formattedDate = date.toLocaleDateString('en-GB', {
     justify-content: space-between;
     gap: var(--space-sm);
     margin-top: 0.45rem;
-    font-family: var(--mono);
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.09em;
     color: var(--bone-soft);
   }
 
