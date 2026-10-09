@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npm test *)",
+      "Bash(npx playwright test *)",
+      "Bash(npx astro *)",
+      "Bash(npx eslint *)",
+      "Bash(npx prettier *)"
+    ],
+    "deny": [
+      "Bash(npm run pages:deploy)",
+      "Bash(npx wrangler deploy *)",
+      "Bash(npx wrangler pages deploy *)",
+      "Bash(wrangler deploy *)",
+      "Bash(wrangler pages deploy *)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-start.sh",
+            "timeout": 300
+          }
+        ]
+      }
+    ]
+  }
+}

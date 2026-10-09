@@ -35,5 +35,6 @@ fix-webkit-ubuntu2510.sh
 # See: https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github
 src/assets/photos/
 
-# Claude Code
-CLAUDE.md
+# Claude Code: CLAUDE.md and .claude/ are shared and committed; only per-machine files are ignored
+.claude/settings.local.json
+CLAUDE.local.md

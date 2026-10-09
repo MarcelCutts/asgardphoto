@@ -5,6 +5,17 @@ import { defineConfig, devices } from '@playwright/test';
  * Following best practices from https://playwright.dev/docs/test-configuration
  * and https://playwright.dev/docs/best-practices
  */
+
+/**
+ * Claude Code cloud sessions (CLAUDE_CODE_REMOTE=true) ship a single
+ * pre-installed Chromium and no Firefox, and block browser downloads.
+ * .claude/hooks/session-start.sh exports PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+ * pointing at that binary. Both variables are unset locally and on CI, where
+ * this config behaves exactly as before.
+ */
+const isClaudeCloudSession = process.env.CLAUDE_CODE_REMOTE === 'true';
+const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+
 export default defineConfig({
   // Test directory
   testDir: './tests',
@@ -47,6 +58,11 @@ export default defineConfig({
     contextOptions: {
       reducedMotion: 'reduce',
     },
+
+    // Use the VM's pre-installed Chromium in Claude Code cloud sessions (see above)
+    ...(chromiumExecutablePath
+      ? { launchOptions: { executablePath: chromiumExecutablePath } }
+      : {}),
   },
 
   // Configure projects for major browsers
@@ -56,10 +72,15 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
 
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
+    // Firefox is not available in Claude Code cloud sessions
+    ...(isClaudeCloudSession
+      ? []
+      : [
+          {
+            name: 'firefox',
+            use: { ...devices['Desktop Firefox'] },
+          },
+        ]),
 
     // Test against mobile viewports
     {
