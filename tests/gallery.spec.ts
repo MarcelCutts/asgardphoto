@@ -18,7 +18,7 @@ test.describe('Event Gallery', () => {
 
     // Check the page heading using getByRole (user-facing locator)
     await expect(
-      page.getByRole('heading', { name: /JavaScript conference circuit/, level: 1 })
+      page.getByRole('heading', { name: /tech conference circuit/, level: 1 })
     ).toBeVisible();
 
     // Check event card is present (article is semantic)

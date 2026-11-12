@@ -141,7 +141,7 @@ test.describe('Accessibility - Semantic HTML', () => {
     // Should have exactly one h1 (using getByRole)
     const h1s = page.getByRole('heading', { level: 1 });
     await expect(h1s).toHaveCount(1);
-    await expect(h1s).toHaveText('Photographs from the JavaScript conference circuit');
+    await expect(h1s).toHaveText('Photographs from the tech conference circuit');
   });
 
   test('event page has proper heading hierarchy', async ({ page }) => {
