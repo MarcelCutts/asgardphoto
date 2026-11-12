@@ -214,8 +214,19 @@ test.describe('Lightbox', () => {
     );
   });
 
-  test('offers a full-size version and a copyable link', async ({ page, context }) => {
-    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  test('offers a full-size version and a copyable link', async ({ page }) => {
+    // Record what the page copies; clipboard permissions differ by browser
+    await page.addInitScript(() => {
+      Object.defineProperty(window.navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          writeText: async (text: string) => {
+            (window as unknown as { copied?: string }).copied = text;
+          },
+        },
+      });
+    });
+    await page.reload();
     await getPhotoButton(page, 0).click();
 
     await expect(page.getByRole('link', { name: /Full size/ })).toHaveAttribute(
@@ -225,6 +236,8 @@ test.describe('Lightbox', () => {
 
     await page.getByRole('button', { name: 'Copy link' }).click();
     await expect(page.getByRole('status')).toHaveText('Link copied');
-    expect(await page.evaluate(() => window.navigator.clipboard.readText())).toMatch(/#photo-1$/);
+    expect(await page.evaluate(() => (window as unknown as { copied?: string }).copied)).toMatch(
+      /#photo-1$/
+    );
   });
 });

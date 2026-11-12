@@ -169,6 +169,9 @@ test.describe('Image variant selection', () => {
       .getByRole('article')
       .first()
       .getByRole('img', { name: /Cover photo from/ });
+    // The index sits below the selects wall and its covers are lazy, so
+    // bring it into view (Firefox only loads lazy images near the viewport)
+    await cover.scrollIntoViewIfNeeded();
     await expect(cover).toBeVisible();
 
     const { rendered, dpr } = await cover.evaluate((el) => ({
