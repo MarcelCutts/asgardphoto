@@ -4,9 +4,10 @@ Conference photography portfolio website built with Astro and Cloudflare.
 
 ## Features
 
-- Responsive photo gallery with native `<dialog>` lightbox
+- Justified-row photo galleries (CSS only, no layout shift) with a native `<dialog>` lightbox
+- Every photo has its own address (`/events/react-summit-2023#photo-12`)
 - On-demand image optimization via Cloudflare Image Resizing (WebP/AVIF, multiple sizes)
-- "The Archive" design system — dark-only sibling of [asgard.tech](https://asgard.tech), with self-hosted Instrument Serif / Schibsted Grotesk / IBM Plex Mono
+- Neutral dark ground and one self-hosted typeface (Schibsted Grotesk), shared with [asgard.tech](https://asgard.tech), so the photographs carry the colour
 - Accessibility-first design (WCAG 2.1 AA compliant)
 - SEO optimized (Open Graph, JSON-LD structured data, sitemap)
 - Zero JavaScript by default (except lightbox interactivity)
@@ -21,16 +22,25 @@ Conference photography portfolio website built with Astro and Cloudflare.
 title: React Summit 2024
 date: 2024-06-14
 location: Amsterdam, Netherlands
-description: Photos from React Summit 2024
 cover: event-name/cover.jpg
 photos:
   - event-name/photo-1.jpg
   - event-name/photo-2.jpg
 ```
 
-Image paths are relative to the R2 bucket root (`photos.asgard.photo`).
+Image paths are relative to the R2 bucket root (`photos.asgard.photo`). `description` is optional: add one only when it says something the title, place and date do not.
 
-3. Commit and push - Cloudflare Pages will auto-deploy.
+3. Record the new photos' dimensions:
+
+```sh
+npm run dimensions
+```
+
+This asks Cloudflare for each new photo's pixel size and writes it to `src/data/photo-dimensions.json`. The galleries are justified rows, which need every aspect ratio before the images load. A photo that has not been measured still shows, cropped to 3:2 in the grid.
+
+4. Commit and push - Cloudflare Pages will auto-deploy.
+
+The photograph the home page opens with is chosen by hand: the `OPENING` constant at the top of `src/pages/index.astro`.
 
 ## Development
 
@@ -39,6 +49,7 @@ npm install       # Install dependencies
 npm run dev       # Start dev server at localhost:4321
 npm run build     # Build production site to ./dist/
 npm run preview   # Preview production build locally
+npm run dimensions  # Record pixel sizes of new photos (see above)
 npm run check     # TypeScript type checking
 npm run lint      # Check code style
 npm run lint:fix  # Fix code style issues
@@ -89,8 +100,9 @@ npm run pages:deploy  # Build and deploy to Cloudflare Pages
 
 ```
 src/
-  components/        # Astro components (EventCard, PhotoGrid)
+  components/        # Astro components (EventStrip, PhotoGrid)
   content/events/    # Event metadata (YAML)
+  data/              # photo-dimensions.json, written by npm run dimensions
   layouts/           # Page layouts
   lib/               # Utilities (Cloudflare image helpers)
   pages/             # Routes

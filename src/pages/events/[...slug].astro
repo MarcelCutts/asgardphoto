@@ -3,25 +3,29 @@ import { getCollection, render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PhotoGrid from '../../components/PhotoGrid.astro';
 import { getImageUrl } from '../../lib/images';
-import { rollMap } from '../../lib/rolls';
+
+// Event dates are plain calendar days; format in UTC so the build machine's
+// time zone cannot move one to the day before
+const formatDate = (date: Date) =>
+  date.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
 
 export async function getStaticPaths() {
   const events = await getCollection('events');
-  const rolls = rollMap(events);
-  return events.map((event) => ({
+  // Newest first, the order of the index
+  const sorted = events.sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+  return sorted.map((event, i) => ({
     params: { slug: event.id },
-    props: { event, rollNo: rolls.get(event.id) ?? '' },
+    props: { event, newer: sorted[i - 1], older: sorted[i + 1] },
   }));
 }
 
-const { event, rollNo } = Astro.props;
+const { event, newer, older } = Astro.props;
 const { Content } = await render(event);
-
-const formattedDate = event.data.date.toLocaleDateString('en-GB', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-});
 
 const photos = event.data.photos || [];
 // OG image: use a larger size for social sharing
@@ -40,67 +44,61 @@ const ogImageUrl = getImageUrl(event.data.cover, {
   ogImage={ogImageUrl}
   ogImageAlt={`Cover photo from ${event.data.title} at ${event.data.location}`}
 >
-  <Fragment slot="head">
-    <!-- Grotesk only renders in event prose, so only event pages pay for it -->
-    <link
-      rel="preload"
-      href="/fonts/SchibstedGrotesk-Variable.woff2"
-      as="font"
-      type="font/woff2"
-      crossorigin
-    />
-  </Fragment>
-
   <article class="event-page">
-    <header class="event-header container">
-      <nav class="breadcrumb apparatus" aria-label="Breadcrumb">
-        <a href="/">Index</a>
-        <span aria-hidden="true">/</span>
-        <span aria-current="page">{event.data.title}</span>
+    <header class="event-header gutter">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="/">All events</a>
       </nav>
 
-      <div class="roll-head">
-        <p class="roll-no">{rollNo}</p>
+      <h1>{event.data.title}</h1>
 
-        <div class="roll-body">
-          <h1>{event.data.title}</h1>
+      <p class="event-meta">
+        <span class="event-location">{event.data.location}</span>
+        <time datetime={event.data.date.toISOString().slice(0, 10)}>
+          {formatDate(event.data.date)}
+        </time>
+        {
+          photos.length > 0 && (
+            <span>
+              {photos.length} photo{photos.length === 1 ? '' : 's'}
+            </span>
+          )
+        }
+      </p>
 
-          <p class="event-meta apparatus">
-            <span class="event-location">{event.data.location}</span>
-            <span aria-hidden="true">&middot;</span>
-            <time datetime={event.data.date.toISOString()}>{formattedDate}</time>
-            {
-              photos.length > 0 && (
-                <>
-                  <span aria-hidden="true">&middot;</span>
-                  <span>
-                    {photos.length} frame{photos.length === 1 ? '' : 's'}
-                  </span>
-                </>
-              )
-            }
-          </p>
+      {event.data.description && <p class="event-description">{event.data.description}</p>}
 
-          {event.data.description && <p class="event-description">{event.data.description}</p>}
-
-          <div class="event-content">
-            <Content />
-          </div>
-        </div>
+      <div class="event-content">
+        <Content />
       </div>
     </header>
 
     {
       photos.length > 0 ? (
-        <div class="contact-sheet container">
-          <div class="sheet-strip apparatus">
-            <span class="sheet-label">Contact sheet</span>
-            <span class="sheet-roll">{rollNo}</span>
-          </div>
-          <PhotoGrid photos={photos} eventTitle={event.data.title} />
-        </div>
+        <PhotoGrid photos={photos} eventTitle={event.data.title} />
       ) : (
-        <p class="no-photos container">Frames pending development.</p>
+        <p class="no-photos gutter">No photos from this event yet.</p>
+      )
+    }
+
+    {
+      (newer || older) && (
+        <nav class="more-events gutter" aria-label="More events">
+          {older && (
+            <a href={`/events/${older.id}`} class="more-link">
+              <span class="more-label">Earlier</span>
+              <span class="more-title">{older.data.title}</span>
+              <span class="more-date">{formatDate(older.data.date)}</span>
+            </a>
+          )}
+          {newer && (
+            <a href={`/events/${newer.id}`} class="more-link more-newer">
+              <span class="more-label">Later</span>
+              <span class="more-title">{newer.data.title}</span>
+              <span class="more-date">{formatDate(newer.data.date)}</span>
+            </a>
+          )}
+        </nav>
       )
     }
   </article>
@@ -125,160 +123,105 @@ const ogImageUrl = getImageUrl(event.data.cover, {
 </BaseLayout>
 
 <style>
+  /* The header stays short so the first row of photographs is on screen
+     when the page opens */
   .event-header {
-    padding-top: clamp(1.5rem, 4vw, 2.75rem);
+    padding-block: clamp(0.75rem, 2.5vw, 1.75rem) clamp(1.25rem, 3vw, 2rem);
   }
 
   .breadcrumb {
-    display: flex;
-    align-items: baseline;
-    gap: 0.6em;
-    margin-bottom: clamp(1.75rem, 4vw, 3rem);
-    color: var(--bone-soft);
+    font-size: 0.9375rem;
+    color: var(--muted);
   }
 
   .breadcrumb a {
-    transition: color 160ms ease;
+    display: inline-block;
+    padding-block: 0.5rem;
+    text-decoration: none;
   }
 
   .breadcrumb a:hover {
-    color: var(--vermilion);
-  }
-
-  .breadcrumb [aria-current='page'] {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  /* Roll header on the rail, mirroring the parent section anatomy */
-  .roll-head {
-    display: grid;
-    grid-template-columns: var(--rail) minmax(0, 1fr);
-    column-gap: clamp(1rem, 3vw, 2.5rem);
-  }
-
-  .roll-no {
-    grid-column: 1;
-    font-family: var(--mono);
-    font-size: 0.95rem;
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    color: var(--vermilion);
-    padding-top: 0.55em;
-  }
-
-  .roll-no::after {
-    content: '';
-    display: block;
-    width: 1.75rem;
-    height: 1px;
-    margin-top: 0.6rem;
-    background: var(--rule-faint);
-  }
-
-  .roll-body {
-    grid-column: 2;
-    min-width: 0;
+    color: var(--text);
+    text-decoration: underline;
   }
 
   h1 {
-    font-family: var(--serif);
-    font-weight: 400;
-    font-size: clamp(2.6rem, 6vw, 4rem);
-    line-height: 1.02;
-    letter-spacing: -0.01em;
+    margin-top: 0.25rem;
+    font-size: clamp(2rem, 1.3rem + 3.2vw, 3.75rem);
+    font-weight: 700;
+    line-height: 1.03;
+    letter-spacing: -0.034em;
+    text-wrap: balance;
   }
 
   .event-meta {
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0.6em;
-    margin-top: var(--space-sm);
-    color: var(--bone-soft);
+    gap: 0 1.25rem;
+    margin-top: 0.6rem;
+    font-size: clamp(1rem, 0.95rem + 0.3vw, 1.125rem);
+    color: var(--muted);
   }
 
   .event-description {
-    margin-top: var(--space-md);
-    max-width: var(--measure);
-    font-size: 1.04rem;
-    color: var(--bone-soft);
-  }
-
-  .event-content {
-    margin-top: var(--space-sm);
+    margin-top: 0.9rem;
+    max-width: 38em;
+    font-size: 1.0625rem;
   }
 
   .event-content :global(p) {
-    max-width: var(--measure);
-    font-size: 1.04rem;
-    line-height: 1.65;
-    color: var(--bone-soft);
+    margin-top: 0.9rem;
+    max-width: 38em;
+    font-size: 1.0625rem;
   }
 
-  .event-content :global(p + p) {
-    margin-top: var(--space-sm);
-  }
-
-  /* Markdown-authored bodies (the collection glob accepts .md); the global
-     `a { color: inherit }` reset would otherwise leave these unmarked */
-  .event-content :global(a) {
-    color: var(--vermilion);
-    text-decoration: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 0.18em;
-    text-decoration-color: var(--rule);
-    transition: text-decoration-color 160ms ease;
-  }
-
+  /* Markdown-authored bodies (the collection glob accepts .md) */
   .event-content :global(a:hover) {
-    text-decoration-color: var(--vermilion);
-  }
-
-  .contact-sheet {
-    margin-top: clamp(1.75rem, 4vw, 3rem);
-  }
-
-  .sheet-strip {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--space-sm);
-    padding-top: 0.7rem;
-    border-top: 1px solid var(--rule);
-    font-weight: 500;
-    color: var(--bone);
-  }
-
-  .sheet-roll {
-    font-weight: 400;
-    color: var(--bone-faint);
+    text-decoration-thickness: 0.14em;
   }
 
   .no-photos {
-    font-family: var(--mono);
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.09em;
-    color: var(--bone-soft);
-    /* padding-block only: the shorthand would zero .container's gutter */
-    padding-block: var(--space-xl);
+    color: var(--muted);
+    /* padding-block only: the shorthand would zero the gutter */
+    padding-block: 3rem;
   }
 
-  @media (max-width: 720px) {
-    .roll-head {
-      grid-template-columns: minmax(0, 1fr);
-    }
+  /* The way on to the next set, once this one has been looked through */
+  .more-events {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 1.5rem 3rem;
+    margin-top: clamp(2.5rem, 6vw, 4rem);
+  }
 
-    .roll-no {
-      grid-column: 1;
-      padding-top: 0;
-      margin-bottom: 0.75rem;
-    }
+  .more-link {
+    display: grid;
+    gap: 0.1rem;
+    text-decoration: none;
+  }
 
-    .roll-body {
-      grid-column: 1;
-    }
+  .more-newer {
+    margin-left: auto;
+    text-align: right;
+  }
+
+  .more-label,
+  .more-date {
+    font-size: 0.9375rem;
+    color: var(--muted);
+  }
+
+  .more-title {
+    font-size: clamp(1.25rem, 1.05rem + 0.9vw, 1.75rem);
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  .more-link:hover .more-title {
+    text-decoration: underline;
+    text-decoration-thickness: 0.07em;
+    text-underline-offset: 0.16em;
   }
 </style>

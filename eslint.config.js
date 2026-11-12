@@ -32,6 +32,17 @@ export default [
       },
     },
   },
+  // Node.js scripts run by hand (npm run dimensions)
+  {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        fetch: 'readonly',
+      },
+    },
+  },
   // Playwright test files - window/DOM types are used inside page.evaluate() browser context
   {
     files: ['tests/**/*.ts'],
@@ -41,6 +52,7 @@ export default [
         document: 'readonly',
         HTMLImageElement: 'readonly',
         HTMLDialogElement: 'readonly',
+        URL: 'readonly',
       },
     },
   },

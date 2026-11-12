@@ -71,7 +71,8 @@ export function getSrcSet(
  * Standard widths for responsive images
  */
 export const RESPONSIVE_WIDTHS = {
-  grid: [400, 800],
-  cover: [400, 800, 1200],
+  grid: [400, 600, 800, 1200],
+  strip: [320, 480, 640, 960, 1280],
+  hero: [800, 1200, 1600, 2400],
   lightbox: [800, 1600, 2400],
 } as const;

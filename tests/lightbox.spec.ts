@@ -3,6 +3,7 @@ import {
   expect,
   frameCounter,
   getPhotoButton,
+  photoHash,
   TEST_EVENT_PHOTO_COUNT,
   TEST_EVENT_SLUG,
 } from './fixtures';
@@ -12,8 +13,8 @@ import {
  * Testing the photo lightbox viewer with keyboard navigation
  * Following best practices for modal dialogs and keyboard interaction
  *
- * Note: Masonry layout rearranges DOM order, so we use data-index selectors
- * to target specific photos by their original index. See fixtures.ts for details.
+ * Note: tests target specific photos by data-index, their position in the
+ * event's list. See fixtures.ts for details.
  */
 
 test.describe('Lightbox', () => {
@@ -194,5 +195,59 @@ test.describe('Lightbox', () => {
     await page.waitForTimeout(250);
 
     expect(await page.evaluate(() => window.scrollY)).toBe(before);
+  });
+});
+
+test.describe('Photo addresses', () => {
+  test('the open photo has its own address, cleared on close', async ({ page }) => {
+    await page.goto(`/events/${TEST_EVENT_SLUG}`);
+    const path = new URL(page.url()).pathname;
+
+    await getPhotoButton(page, 4).click();
+    await expect(page).toHaveURL(new RegExp(`${photoHash(5)}$`));
+
+    await page.keyboard.press('ArrowRight');
+    await expect(page).toHaveURL(new RegExp(`${photoHash(6)}$`));
+
+    // The dialog's close event, which clears the address, fires a task after
+    // the dialog itself has gone: wait for the address rather than read it once
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#lightbox')).not.toBeVisible();
+    await expect.poll(() => new URL(page.url()).hash).toBe('');
+    expect(new URL(page.url()).pathname).toBe(path);
+  });
+
+  test('moving between photos does not add to the browser history', async ({ page }) => {
+    await page.goto('/');
+    await page.goto(`/events/${TEST_EVENT_SLUG}`);
+
+    await getPhotoButton(page, 0).click();
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('Escape');
+
+    // One step back leaves the event, however many photos were viewed
+    await page.goBack();
+    await expect(page).toHaveURL('/');
+  });
+
+  test("arriving on a photo's address opens that photo", async ({ page }) => {
+    await page.goto(`/events/${TEST_EVENT_SLUG}${photoHash(12)}`);
+
+    await expect(page.locator('#lightbox')).toBeVisible();
+    await expect(page.getByTestId('lightbox-counter')).toHaveText(
+      frameCounter(12, TEST_EVENT_PHOTO_COUNT)
+    );
+
+    // Closing hands focus to that photo in the grid
+    await page.keyboard.press('Escape');
+    await expect(getPhotoButton(page, 11)).toBeFocused();
+  });
+
+  test('an address beyond the last photo is ignored', async ({ page }) => {
+    await page.goto(`/events/${TEST_EVENT_SLUG}${photoHash(TEST_EVENT_PHOTO_COUNT + 1)}`);
+
+    await expect(getPhotoButton(page, 0)).toBeVisible();
+    await expect(page.locator('#lightbox')).not.toBeVisible();
   });
 });

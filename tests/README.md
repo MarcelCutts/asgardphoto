@@ -103,8 +103,8 @@ Following official Playwright documentation and 2025-2026 best practices:
 
 Verifies core gallery functionality:
 
-- ✓ Home page displays event cards
-- ✓ Event pages load correctly
+- ✓ Home page opens on a photograph and lists events by year
+- ✓ Event pages load correctly, and link on to the neighbouring events
 - ✓ All 52 photos display
 - ✓ Event metadata shows correctly
 - ✓ Navigation between pages works
@@ -119,6 +119,7 @@ Tests the photo viewer:
 - ✓ Wraps around at start/end
 - ✓ Focus returns to trigger element
 - ✓ Displays correct photo for clicked image
+- ✓ The open photo has its own address (`#photo-12`), which opens that photo on arrival
 
 ### 3. Responsive Tests
 
@@ -126,8 +127,9 @@ Validates image optimization:
 
 - ✓ Images lazy load (except first 8)
 - ✓ WebP format used for modern browsers
-- ✓ Proper width/height to prevent layout shift
-- ✓ Grid adapts to mobile/tablet/desktop
+- ✓ Every photo reserves its space before it loads (no layout shift)
+- ✓ Photos in a row share one height and stay in source order
+- ✓ Grid adapts to mobile/tablet/desktop, and is visible without JavaScript
 - ✓ Async decoding for better performance
 
 ### 4. Accessibility Tests

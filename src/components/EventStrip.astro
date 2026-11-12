@@ -1,0 +1,174 @@
+---
+import { getImageUrl, getSrcSet, RESPONSIVE_WIDTHS } from '../lib/images';
+import { getPhotoSize } from '../lib/dimensions';
+
+interface Props {
+  slug: string;
+  title: string;
+  date: Date;
+  location: string;
+  cover: string;
+  photos: string[];
+}
+
+const { slug, title, date, location, cover, photos } = Astro.props;
+
+// Event dates are plain calendar days; format in UTC so the build machine's
+// time zone cannot move one to the day before
+const formattedDate = date.toLocaleDateString('en-GB', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
+const count = photos.length;
+
+// A conference of 140 photographs should not look the same size as a meetup
+// of eight, so the strip's height follows the size of the set.
+// [wide screens, narrow screens], in rem
+const HEIGHTS = {
+  large: [17, 10],
+  medium: [13.5, 8.5],
+  small: [10.5, 7],
+} as const;
+const size = count >= 100 ? 'large' : count >= 30 ? 'medium' : 'small';
+const [wideRem, narrowRem] = HEIGHTS[size];
+
+// The cover first, then an even spread through the rest of the set. Enough
+// frames to run off the right-hand edge of a wide screen.
+const STRIP_LENGTH = 8;
+const rest = photos.filter((photo) => photo !== cover);
+const spread = Math.min(STRIP_LENGTH - 1, rest.length);
+const strip = [
+  cover,
+  ...Array.from({ length: spread }, (_, i) => rest[Math.floor(((i + 0.5) * rest.length) / spread)]),
+].map((photo) => {
+  const { width, height, ratio } = getPhotoSize(photo);
+  return {
+    photo,
+    width,
+    height,
+    sizes: `(max-width: 48rem) ${Math.round(ratio * narrowRem * 16)}px, ${Math.round(ratio * wideRem * 16)}px`,
+  };
+});
+---
+
+<article class={`event event-${size}`}>
+  <a href={`/events/${slug}`} class="event-link">
+    <div class="event-head gutter">
+      <h3 class="event-title">{title}</h3>
+      <p class="event-meta">
+        <span>{location}</span>
+        <time datetime={date.toISOString().slice(0, 10)}>{formattedDate}</time>
+        {
+          count > 0 && (
+            <span>
+              {count} photo{count === 1 ? '' : 's'}
+            </span>
+          )
+        }
+      </p>
+    </div>
+    <!-- The link is already named by the heading, so the frames are decorative -->
+    <div class="strip">
+      {
+        strip.map(({ photo, width, height, sizes }) => (
+          <img
+            src={getImageUrl(photo, { width: 640, format: 'auto' })}
+            srcset={getSrcSet(photo, RESPONSIVE_WIDTHS.strip, { format: 'auto' })}
+            sizes={sizes}
+            width={width}
+            height={height}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            class="strip-photo"
+          />
+        ))
+      }
+    </div>
+  </a>
+</article>
+
+<style>
+  .event-link {
+    display: block;
+    text-decoration: none;
+  }
+
+  .event-link:focus-visible {
+    outline-offset: -2px;
+  }
+
+  .event-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.1rem 1.25rem;
+    padding-left: 0;
+    padding-bottom: 0.7rem;
+  }
+
+  .event-title {
+    font-size: clamp(1.25rem, 1.05rem + 0.9vw, 1.75rem);
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  .event-link:hover .event-title {
+    text-decoration: underline;
+    text-decoration-thickness: 0.07em;
+    text-underline-offset: 0.16em;
+  }
+
+  .event-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 1.1rem;
+    color: var(--muted);
+  }
+
+  /* One row of frames that runs off the right-hand edge of the page */
+  .strip {
+    display: flex;
+    gap: var(--photo-gap);
+    height: var(--strip-height);
+    overflow: hidden;
+  }
+
+  .strip-photo {
+    flex: none;
+    width: auto;
+    max-width: none;
+    height: 100%;
+    background: var(--surface);
+  }
+
+  .event-large {
+    --strip-height: 10rem;
+  }
+
+  .event-medium {
+    --strip-height: 8.5rem;
+  }
+
+  .event-small {
+    --strip-height: 7rem;
+  }
+
+  @media (min-width: 48.0625rem) {
+    .event-large {
+      --strip-height: 17rem;
+    }
+
+    .event-medium {
+      --strip-height: 13.5rem;
+    }
+
+    .event-small {
+      --strip-height: 10.5rem;
+    }
+  }
+</style>

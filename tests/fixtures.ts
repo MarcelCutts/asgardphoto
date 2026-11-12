@@ -28,20 +28,28 @@ export const test = base.extend({
 export { expect };
 
 /**
- * Lightbox frame counter format ("FR. 12 / 52").
+ * Lightbox counter format ("12 / 52").
  * Keep in sync with the counter template in PhotoGrid.astro.
  */
 export function frameCounter(current: number, total: number): string {
-  return `FR. ${current} / ${total}`;
+  return `${current} / ${total}`;
+}
+
+/**
+ * Address of one photo ("#photo-12"), as the lightbox writes it to the URL.
+ * Keep in sync with PHOTO_HASH in PhotoGrid.astro.
+ */
+export function photoHash(current: number): string {
+  return `#photo-${current}`;
 }
 
 /**
  * Helper to get a specific photo button by its original index.
  *
  * Why use data-index instead of getByRole?
- * - Masonry layout rearranges DOM order, so nth() selectors are unreliable
- * - Photo buttons have aria-labels, but we need to target by ORIGINAL index
- * - data-index provides stable selection regardless of layout changes
+ * - Photo buttons have aria-labels, but tests need one specific photo
+ * - data-index is the photo's position in the event's list, and does not
+ *   depend on how the rows happen to break at the current width
  */
 export function getPhotoButton(page: Page, index: number) {
   return page.locator(`.photo-button[data-index="${index}"]`);

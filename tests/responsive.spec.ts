@@ -9,15 +9,14 @@ import { getPhotoButton, getPhotoImage } from './fixtures';
  * Locator Priority (per Playwright best practices):
  * 1. getByRole() - First choice
  * 2. getByText(), getByLabel() - User-facing locators
- * 3. data-index selectors - For specific photo targeting (masonry reorders DOM)
+ * 3. data-index selectors - For targeting one specific photo
  */
 
 test.describe('Responsive Images', () => {
   test('images have proper attributes for lazy loading', async ({ page }) => {
     await page.goto('/events/react-native-conf-2024');
 
-    // Use data-index to find specific images (masonry rearranges DOM order)
-    // First 8 images (by original index) should be eager loaded
+    // First 8 images should be eager loaded
     const eagerImg = getPhotoImage(page, 0);
     await expect(eagerImg).toHaveAttribute('loading', 'eager');
 
@@ -50,9 +49,9 @@ test.describe('Responsive Images', () => {
   test('event card cover image has responsive attributes', async ({ page }) => {
     await page.goto('/');
 
-    // Using getByRole for semantic image query within article
+    // Strip photos are decorative (alt=""), so they have no img role
     const eventCard = page.getByRole('article').first();
-    const coverImg = eventCard.getByRole('img');
+    const coverImg = eventCard.locator('img').first();
     await expect(coverImg).toBeVisible();
 
     // Should be lazy loaded
@@ -142,19 +141,51 @@ test.describe('Responsive Layout', () => {
 });
 
 test.describe('Image Performance', () => {
-  test('masonry grid prevents layout shift by hiding until initialized', async ({ page }) => {
+  test('every photo reserves its space before it loads', async ({ page }) => {
     await page.goto('/events/react-native-conf-2024');
 
-    // Masonry component adds 'initialized' class after layout is ready
-    // Content is hidden (visibility: hidden) until then
-    const masonryContainer = page.locator('[data-masonry-container]');
-    await expect(masonryContainer).toHaveClass(/initialized/);
+    // A lazy photo far down the page: its dimensions come from
+    // src/data/photo-dimensions.json, so the row is laid out before it arrives
+    const lazyImg = getPhotoImage(page, 40);
+    await expect(lazyImg).toHaveAttribute('width', /^\d+$/);
+    await expect(lazyImg).toHaveAttribute('height', /^\d+$/);
+
+    const { boxRatio, attrRatio } = await lazyImg.evaluate((el: HTMLImageElement) => {
+      const box = el.closest('.photo-item')!.getBoundingClientRect();
+      return { boxRatio: box.width / box.height, attrRatio: el.width / el.height };
+    });
+    expect(Math.abs(boxRatio - attrRatio)).toBeLessThan(0.02);
+  });
+
+  test('photos in a row share one height and keep their order', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/events/react-native-conf-2024');
+
+    const boxes = await page.locator('.photo-item').evaluateAll((items) =>
+      items.slice(0, 12).map((el) => {
+        const { top, left, height } = el.getBoundingClientRect();
+        return { top: Math.round(top), left: Math.round(left), height: Math.round(height) };
+      })
+    );
+
+    for (let i = 1; i < boxes.length; i++) {
+      const [prev, cur] = [boxes[i - 1], boxes[i]];
+      if (cur.top === prev.top) {
+        // Same row: reads left to right, at the same height
+        expect(cur.left).toBeGreaterThan(prev.left);
+        expect(Math.abs(cur.height - prev.height)).toBeLessThanOrEqual(1);
+      } else {
+        // Next row: starts below, back at the left-hand edge
+        expect(cur.top).toBeGreaterThan(prev.top);
+        expect(cur.left).toBe(boxes[0].left);
+      }
+    }
   });
 
   test('lazy loaded images only load when scrolled into view', async ({ page }) => {
     await page.goto('/events/react-native-conf-2024');
 
-    // Get an image far down the page using data-index (masonry rearranges DOM)
+    // Get an image far down the page
     const bottomPhoto = getPhotoButton(page, 40);
 
     // Wait for the element to exist in DOM
@@ -166,5 +197,16 @@ test.describe('Image Performance', () => {
     // Now it should be visible and loaded
     await expect(bottomPhoto).toBeVisible();
     await expect(bottomPhoto.locator('img')).toBeVisible();
+  });
+});
+
+test.describe('Without JavaScript', () => {
+  test.use({ javaScriptEnabled: false });
+
+  test('the photo grid is laid out and visible', async ({ page }) => {
+    await page.goto('/events/react-native-conf-2024');
+
+    await expect(getPhotoButton(page, 0)).toBeVisible();
+    await expect(getPhotoImage(page, 0)).toBeVisible();
   });
 });

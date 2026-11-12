@@ -52,11 +52,16 @@ test.describe('Accessibility - Keyboard Navigation', () => {
     await logo.focus();
     await expect(logo).toBeFocused();
 
-    // Tab to the cross-site masthead link
+    // Tab through the rest of the masthead
+    const masthead = page.getByRole('navigation', { name: 'Main navigation' });
     await page.keyboard.press('Tab');
-    await expect(page.getByRole('link', { name: 'Asgard.tech' })).toBeFocused();
+    await expect(masthead.getByRole('link', { name: 'Contact' })).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(masthead.getByRole('link', { name: 'asgard.tech' })).toBeFocused();
 
-    // Tab to first event card
+    // Tab to the opening photograph, then the first event
+    await page.keyboard.press('Tab');
+    await expect(page.locator('a.opening')).toBeFocused();
     await page.keyboard.press('Tab');
     const firstEventLink = page.getByRole('article').first().getByRole('link');
     await expect(firstEventLink).toBeFocused();
@@ -133,7 +138,7 @@ test.describe('Accessibility - Semantic HTML', () => {
     // Should have exactly one h1 (using getByRole)
     const h1s = page.getByRole('heading', { level: 1 });
     await expect(h1s).toHaveCount(1);
-    await expect(h1s).toHaveText('Asgard.photo');
+    await expect(h1s).toHaveText('Photographs from tech conferences and meetups');
   });
 
   test('event page has proper heading hierarchy', async ({ page }) => {

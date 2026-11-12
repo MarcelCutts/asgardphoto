@@ -6,6 +6,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
+    "dimensions": "node scripts/photo-dimensions.mjs",
     "check": "astro check",
     "lint": "astro check && eslint . && prettier --check .",
     "lint:fix": "eslint --fix . && prettier --write .",
@@ -21,8 +22,7 @@
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.6.1",
-    "astro": "^5.16.8",
-    "astro-masonry": "^1.2.2"
+    "astro": "^5.16.8"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.6",

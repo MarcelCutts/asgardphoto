@@ -1,189 +1,243 @@
 ---
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import EventCard from '../components/EventCard.astro';
-import { getImageUrl } from '../lib/images';
-import { rollMap } from '../lib/rolls';
+import EventStrip from '../components/EventStrip.astro';
+import { getImageUrl, getSrcSet, RESPONSIVE_WIDTHS } from '../lib/images';
+import { getPhotoSize } from '../lib/dimensions';
+
+/**
+ * The photograph the site opens with. Chosen by hand: a wide frame that says
+ * "conference" before any text does. If its event is ever removed, the page
+ * falls back to the newest event's cover.
+ */
+const OPENING = {
+  event: 'react-summit-2023',
+  photo: 'react-summit-2023/_DSC6700.jpg',
+  alt: 'The main hall at React Summit: the audience seated either side of a long central aisle that leads to the stage.',
+};
 
 const events = await getCollection('events');
-const rolls = rollMap(events);
 
-// Sort events by date, newest first (roll numbers read descending)
+// Newest first
 const sortedEvents = events.sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
 
-const totalFrames = events.reduce((sum, event) => sum + (event.data.photos?.length ?? 0), 0);
-const rollCount = String(events.length).padStart(3, '0');
+const totalPhotos = events.reduce((sum, event) => sum + (event.data.photos?.length ?? 0), 0);
 
-// Use the most recent event's cover as the OG image for the homepage
+// Event dates are plain calendar days, so read them in UTC throughout
+const yearOf = (date: Date) => date.getUTCFullYear();
+const years = [...new Set(sortedEvents.map((event) => yearOf(event.data.date)))];
+const eventsByYear = years.map((year) => ({
+  year,
+  events: sortedEvents.filter((event) => yearOf(event.data.date) === year),
+}));
+const span =
+  years.length > 1 ? `${years[years.length - 1]} to ${years[0]}` : String(years[0] ?? '');
+
+const openingEvent = sortedEvents.find((event) => event.id === OPENING.event) ?? sortedEvents[0];
+const opening =
+  openingEvent?.id === OPENING.event
+    ? OPENING
+    : openingEvent && {
+        event: openingEvent.id,
+        photo: openingEvent.data.cover,
+        alt: `Cover photo from ${openingEvent.data.title}`,
+      };
+const openingSize = opening && getPhotoSize(opening.photo);
+const openingCaption =
+  openingEvent &&
+  [
+    openingEvent.data.title,
+    openingEvent.data.location.split(',')[0],
+    openingEvent.data.date.toLocaleDateString('en-GB', {
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    }),
+  ].join(', ');
+
 const ogImageUrl =
-  sortedEvents.length > 0
-    ? getImageUrl(sortedEvents[0].data.cover, {
-        width: 1200,
-        height: 630,
-        fit: 'cover',
-        format: 'jpeg',
-      })
-    : undefined;
+  opening &&
+  getImageUrl(opening.photo, {
+    width: 1200,
+    height: 630,
+    fit: 'cover',
+    format: 'jpeg',
+  });
 ---
 
 <BaseLayout
   title="Conference Photography"
   description="Photography from tech conferences and developer events."
   ogImage={ogImageUrl}
-  ogImageAlt={sortedEvents.length > 0
-    ? `Cover photo from ${sortedEvents[0].data.title}`
-    : undefined}
+  ogImageAlt={opening?.alt}
 >
   <Fragment slot="head">
-    <!-- The hero tagline is serif italic, above the fold -->
-    <link
-      rel="preload"
-      href="/fonts/InstrumentSerif-Italic.woff2"
-      as="font"
-      type="font/woff2"
-      crossorigin
-    />
-  </Fragment>
-
-  <section class="hero container">
-    <h1 class="wordmark">Asgard<span class="wordmark-ext">.photo</span></h1>
-    <p class="tagline">The photographic record of the tech conference circuit.</p>
-    <div class="hero-meta apparatus">
-      <span>Rolls {rollCount} &middot; Frames {totalFrames}</span>
-      <svg class="rune" viewBox="0 0 24 32" aria-hidden="true">
-        <path d="M7 2v28M7 5l13 8M7 14l13 8"></path>
-      </svg>
-    </div>
-  </section>
-
-  <section class="events-section container" aria-labelledby="events-heading">
-    <div class="events-strip apparatus">
-      <h2 id="events-heading" class="apparatus">Index of rolls</h2>
-      <span class="events-order">Newest first</span>
-    </div>
     {
-      sortedEvents.length > 0 ? (
-        <div class="events-grid">
-          {sortedEvents.map((event) => (
-            <EventCard
-              slug={event.id}
-              rollNo={rolls.get(event.id) ?? ''}
-              title={event.data.title}
-              date={event.data.date}
-              location={event.data.location}
-              cover={event.data.cover}
-              photoCount={event.data.photos?.length}
-            />
-          ))}
-        </div>
-      ) : (
-        <p class="no-events">No rolls filed yet.</p>
+      opening && (
+        <link
+          rel="preload"
+          as="image"
+          href={getImageUrl(opening.photo, { width: 1600, format: 'auto' })}
+          imagesrcset={getSrcSet(opening.photo, RESPONSIVE_WIDTHS.hero, { format: 'auto' })}
+          imagesizes="100vw"
+          fetchpriority="high"
+        />
       )
     }
+  </Fragment>
+
+  {
+    opening && openingSize && (
+      <a href={`/events/${opening.event}`} class="opening">
+        <img
+          src={getImageUrl(opening.photo, { width: 1600, format: 'auto' })}
+          srcset={getSrcSet(opening.photo, RESPONSIVE_WIDTHS.hero, { format: 'auto' })}
+          sizes="100vw"
+          width={openingSize.width}
+          height={openingSize.height}
+          alt={opening.alt}
+          fetchpriority="high"
+          decoding="async"
+          class="opening-photo"
+        />
+        <span class="opening-caption gutter">{openingCaption}</span>
+      </a>
+    )
+  }
+
+  <section class="intro gutter">
+    <h1>Photographs from tech conferences and meetups</h1>
+    <p class="intro-count">
+      {events.length} events, {totalPhotos.toLocaleString('en-GB')} photographs, {span}
+    </p>
   </section>
+
+  <div id="events">
+    {
+      eventsByYear.length > 0 ? (
+        eventsByYear.map(({ year, events: yearEvents }) => (
+          <section class="year" aria-labelledby={`year-${year}`}>
+            <h2 id={`year-${year}`} class="year-heading">
+              {year}
+            </h2>
+            <div class="year-events">
+              {yearEvents.map((event) => (
+                <EventStrip
+                  slug={event.id}
+                  title={event.data.title}
+                  date={event.data.date}
+                  location={event.data.location}
+                  cover={event.data.cover}
+                  photos={event.data.photos ?? []}
+                />
+              ))}
+            </div>
+          </section>
+        ))
+      ) : (
+        <p class="no-events gutter">No events yet.</p>
+      )
+    }
+  </div>
 </BaseLayout>
 
 <style>
-  .hero {
-    padding-top: clamp(2.5rem, 6vw, 4.25rem);
-    padding-bottom: clamp(1.75rem, 4vw, 3rem);
+  /* The page opens on a photograph, edge to edge, with the next thing
+     already showing beneath it */
+  .opening {
+    display: block;
+    text-decoration: none;
   }
 
-  .wordmark {
-    font-family: var(--serif);
-    font-weight: 400;
-    font-size: clamp(3.2rem, 10.5vw, 8.5rem);
-    line-height: 0.95;
-    letter-spacing: -0.015em;
-    margin-left: -0.04em;
+  .opening-photo {
+    width: 100%;
+    height: min(68svh, 62vw);
+    object-fit: cover;
+    object-position: 50% 42%;
+    background: var(--surface);
   }
 
-  .wordmark-ext {
-    color: var(--vermilion);
+  .opening-caption {
+    display: block;
+    padding-top: 0.55rem;
+    font-size: 0.9375rem;
+    color: var(--muted);
   }
 
-  .tagline {
-    margin-top: clamp(1rem, 2.5vw, 1.75rem);
-    max-width: 30ch;
-    font-family: var(--serif);
-    font-style: italic;
-    font-size: clamp(1.35rem, 2.6vw, 1.9rem);
-    line-height: 1.25;
+  .opening:hover .opening-caption {
+    color: var(--text);
+    text-decoration: underline;
+  }
+
+  .intro {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem 3rem;
+    padding-block: clamp(2rem, 5vw, 3.75rem) clamp(2.5rem, 6vw, 4.5rem);
+  }
+
+  .intro h1 {
+    max-width: 16em;
+    font-size: clamp(1.75rem, 1.2rem + 2.4vw, 3rem);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.032em;
     text-wrap: balance;
   }
 
-  .hero-meta {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-sm);
-    margin-top: clamp(1.75rem, 4vw, 3rem);
-    padding-top: 0.7rem;
-    border-top: 1px solid var(--rule);
-    color: var(--bone-soft);
+  .intro-count {
+    font-size: clamp(1rem, 0.95rem + 0.3vw, 1.125rem);
+    color: var(--muted);
   }
 
-  .hero-meta .rune {
-    color: var(--vermilion);
+  /* Years down the left; each year's events run off the right-hand edge */
+  .year {
+    padding-left: var(--gutter);
   }
 
-  /* `rise` comes from BaseLayout's global styles */
-  @media (prefers-reduced-motion: no-preference) {
-    .wordmark {
-      animation: rise 700ms var(--ease-brand) 220ms both;
-    }
-
-    .tagline {
-      animation: rise 700ms var(--ease-brand) 340ms both;
-    }
-
-    .hero-meta {
-      animation: rise 700ms var(--ease-brand) 460ms both;
-    }
+  .year + .year {
+    margin-top: clamp(2.75rem, 6vw, 4.5rem);
   }
 
-  .events-section {
-    padding-bottom: var(--space-xl);
+  .year-heading {
+    font-size: clamp(2.25rem, 1.7rem + 2.2vw, 3.25rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.045em;
+    font-variant-numeric: lining-nums tabular-nums;
   }
 
-  .events-strip {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--space-sm);
-    padding-top: 0.7rem;
-    border-top: 1px solid var(--rule);
-    margin-bottom: var(--space-lg);
-  }
-
-  .events-strip h2 {
-    font-weight: 500;
-    color: var(--bone);
-  }
-
-  .events-order {
-    color: var(--bone-faint);
-  }
-
-  .events-grid {
+  .year-events {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: var(--space-lg);
+    /* minmax(0, …): the strips are wider than the page by design and must
+       not widen the track they sit in */
+    grid-template-columns: minmax(0, 1fr);
+    gap: clamp(2rem, 4.5vw, 3rem);
+    margin-top: 1.25rem;
+    min-width: 0;
   }
 
-  @media (max-width: 640px) {
-    .events-grid {
-      grid-template-columns: 1fr;
-      gap: var(--space-md);
+  @media (min-width: 64rem) {
+    .year {
+      display: grid;
+      grid-template-columns: 10.5rem minmax(0, 1fr);
+      align-items: start;
+    }
+
+    .year-heading {
+      position: sticky;
+      top: 1.25rem;
+    }
+
+    .year-events {
+      margin-top: 0.35rem;
     }
   }
 
   .no-events {
-    font-family: var(--mono);
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.09em;
-    color: var(--bone-soft);
-    padding: var(--space-xl) 0;
+    color: var(--muted);
+    padding-block: 3rem;
   }
 </style>

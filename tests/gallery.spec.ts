@@ -16,16 +16,19 @@ test.describe('Event Gallery', () => {
   test('home page displays event cards', async ({ page }) => {
     await page.goto('/');
 
-    // Check hero wordmark using getByRole (user-facing locator)
-    await expect(page.getByRole('heading', { name: 'Asgard.photo', level: 1 })).toBeVisible();
+    // The page is named by what it holds, not by a wordmark
+    await expect(
+      page.getByRole('heading', { name: 'Photographs from tech conferences and meetups', level: 1 })
+    ).toBeVisible();
 
     // Check event card is present (article is semantic)
     const eventCard = page.getByRole('article').first();
     await expect(eventCard).toBeVisible();
 
-    // Verify event card has required elements (scoped role queries)
+    // Verify event card has required elements. Its photos are decorative
+    // (alt=""): the link is named by the heading, so they have no img role.
     await expect(eventCard.getByRole('heading')).toBeVisible();
-    await expect(eventCard.getByRole('img')).toBeVisible();
+    await expect(eventCard.locator('img').first()).toBeVisible();
   });
 
   test('React Native Conference 2024 event page displays correctly', async ({ page }) => {
@@ -37,11 +40,11 @@ test.describe('Event Gallery', () => {
     // Check breadcrumb navigation (using getByRole with accessible name)
     const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' });
     await expect(breadcrumb).toBeVisible();
-    await expect(breadcrumb.getByRole('link', { name: 'Index' })).toHaveAttribute('href', '/');
+    await expect(breadcrumb.getByRole('link', { name: 'All events' })).toHaveAttribute('href', '/');
 
     // Check metadata is displayed (using getByText for visible content)
     await expect(page.getByText('London, UK')).toBeVisible();
-    await expect(page.getByText(`${TEST_EVENT_PHOTO_COUNT} frames`)).toBeVisible();
+    await expect(page.getByText(`${TEST_EVENT_PHOTO_COUNT} photos`)).toBeVisible();
   });
 
   test('event page displays all photos', async ({ page }) => {
@@ -74,13 +77,43 @@ test.describe('Event Gallery', () => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   });
 
-  test('frame count displays on event card', async ({ page }) => {
+  test('photo count displays on event card', async ({ page }) => {
     await page.goto('/');
 
     const eventCard = page.getByRole('article').first();
 
-    // Look for frame count text (using getByText)
-    await expect(eventCard.getByText(/\d+ frames?/i)).toBeVisible();
+    // Look for photo count text (using getByText)
+    await expect(eventCard.getByText(/\d+ photos?/i)).toBeVisible();
+  });
+
+  test('home page opens on a photograph that links to its event', async ({ page }) => {
+    await page.goto('/');
+
+    const opening = page.getByRole('link', { name: /React Summit, Amsterdam, June 2023/ });
+    await expect(opening.getByRole('img')).toBeVisible();
+    await expect(opening).toHaveAttribute('href', '/events/react-summit-2023');
+  });
+
+  test('events are grouped under their year, newest first', async ({ page }) => {
+    await page.goto('/');
+
+    const years = await page.getByRole('heading', { level: 2, name: /^\d{4}$/ }).allTextContents();
+    expect(years.length).toBeGreaterThan(1);
+    expect(years).toEqual([...years].sort().reverse());
+  });
+
+  test('event page links on to the neighbouring events', async ({ page }) => {
+    await page.goto('/events/react-summit-2023');
+
+    const more = page.getByRole('navigation', { name: 'More events' });
+    await expect(more.getByRole('link', { name: /Earlier/ })).toHaveAttribute(
+      'href',
+      '/events/jsnation-2023'
+    );
+    await expect(more.getByRole('link', { name: /Later/ })).toHaveAttribute(
+      'href',
+      '/events/react-advanced-2023'
+    );
   });
 
   test('masthead persists across client-side navigation', async ({ page }) => {
@@ -100,15 +133,11 @@ test.describe('Event Gallery', () => {
 });
 
 test.describe('Image variant selection', () => {
-  // The browser should fetch the smallest srcset rendition that covers the
-  // rendered slot (rendered CSS px × devicePixelRatio) — a stale `sizes`
-  // attribute makes it download 2-4× the needed bytes.
-  const expectedVariant = (widths: readonly number[], renderedPx: number, dpr: number) =>
-    widths.find((w) => w >= renderedPx * dpr) ?? widths[widths.length - 1];
+  // A stale `sizes` attribute makes the browser download 2-4× the bytes it
+  // needs, or an image too small for its slot.
+  const fetchedWidth = (src: string) => Number(src.match(/width=(\d+),/)?.[1]);
 
-  test('desktop photo grid loads the smallest rendition that covers its columns', async ({
-    page,
-  }) => {
+  test('desktop photo grid loads a rendition that fits its slot', async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1080 });
     await page.goto('/events/react-native-conf-2024');
 
@@ -119,27 +148,36 @@ test.describe('Image variant selection', () => {
       rendered: el.getBoundingClientRect().width,
       dpr: window.devicePixelRatio,
     }));
-    const expected = expectedVariant(RESPONSIVE_WIDTHS.grid, rendered, dpr);
+    const needed = rendered * dpr;
+    const smallest = RESPONSIVE_WIDTHS.grid[0];
 
+    // A photo's exact width depends on how its row breaks, so `sizes` is an
+    // estimate: allow a little under, and no more than double (or the
+    // smallest rendition, when even that is more than double)
     await expect
-      .poll(async () => img.evaluate((el: HTMLImageElement) => el.currentSrc))
-      .toContain(`width=${expected},`);
+      .poll(async () => fetchedWidth(await img.evaluate((el: HTMLImageElement) => el.currentSrc)))
+      .toBeGreaterThanOrEqual(Math.min(needed * 0.85, RESPONSIVE_WIDTHS.grid.at(-1)!));
+    expect(
+      fetchedWidth(await img.evaluate((el: HTMLImageElement) => el.currentSrc))
+    ).toBeLessThanOrEqual(Math.max(needed * 2, smallest));
   });
 
-  test('desktop index covers load the smallest rendition that covers their slot', async ({
+  test('desktop index strips load the smallest rendition that covers their slot', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1920, height: 1080 });
     await page.goto('/');
 
-    const cover = page.getByRole('article').first().getByRole('img');
+    // Strip photos have a fixed height, so their width is known exactly
+    const cover = page.getByRole('article').first().locator('img').first();
     await expect(cover).toBeVisible();
 
     const { rendered, dpr } = await cover.evaluate((el) => ({
       rendered: el.getBoundingClientRect().width,
       dpr: window.devicePixelRatio,
     }));
-    const expected = expectedVariant(RESPONSIVE_WIDTHS.cover, rendered, dpr);
+    const widths: readonly number[] = RESPONSIVE_WIDTHS.strip;
+    const expected = widths.find((w) => w >= rendered * dpr) ?? widths[widths.length - 1];
 
     await expect
       .poll(async () => cover.evaluate((el: HTMLImageElement) => el.currentSrc))

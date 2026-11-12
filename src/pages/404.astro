@@ -2,77 +2,39 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
-<BaseLayout title="Frame not found" description="This page is not in the archive.">
-  <Fragment slot="head">
-    <!-- The lede is serif italic, above the fold -->
-    <link
-      rel="preload"
-      href="/fonts/InstrumentSerif-Italic.woff2"
-      as="font"
-      type="font/woff2"
-      crossorigin
-    />
-  </Fragment>
-
-  <section class="notfound container">
-    <p class="notfound-code">R—404</p>
-    <h1>Frame not found.</h1>
-    <p class="notfound-lede">This frame was never filed, or has been struck from the record.</p>
-    <a class="notfound-back apparatus" href="/">Return to the index</a>
+<BaseLayout title="Page not found" description="There is nothing at this address.">
+  <section class="notfound gutter">
+    <h1>Page not found</h1>
+    <p>
+      There is nothing at this address. <a href="/">See all events</a>.
+    </p>
   </section>
 </BaseLayout>
 
 <style>
   .notfound {
-    padding-block: clamp(3rem, 10vw, 6rem);
-  }
-
-  .notfound-code {
-    font-family: var(--mono);
-    font-size: 0.95rem;
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    color: var(--vermilion);
-  }
-
-  .notfound-code::after {
-    content: '';
-    display: block;
-    width: 1.75rem;
-    height: 1px;
-    margin-top: 0.6rem;
-    background: var(--rule-faint);
+    padding-block: clamp(3rem, 10vw, 7rem);
   }
 
   h1 {
-    margin-top: var(--space-md);
-    font-family: var(--serif);
-    font-weight: 400;
-    font-size: clamp(2.6rem, 6vw, 4rem);
-    line-height: 1.02;
-    letter-spacing: -0.01em;
+    font-size: clamp(2rem, 1.3rem + 3.2vw, 3.75rem);
+    font-weight: 700;
+    line-height: 1.03;
+    letter-spacing: -0.034em;
   }
 
-  .notfound-lede {
-    margin-top: var(--space-sm);
-    max-width: var(--measure);
-    font-family: var(--serif);
-    font-style: italic;
-    font-size: 1.35rem;
-    color: var(--bone-soft);
+  p {
+    margin-top: 1rem;
+    max-width: 34em;
+    font-size: 1.125rem;
+    color: var(--muted);
   }
 
-  .notfound-back {
-    display: inline-block;
-    margin-top: var(--space-lg);
-    font-weight: 500;
-    color: var(--bone);
-    border-bottom: 1.5px solid var(--vermilion);
-    padding-bottom: 0.2em;
-    transition: color 160ms ease;
+  a {
+    color: var(--text);
   }
 
-  .notfound-back:hover {
-    color: var(--vermilion);
+  a:hover {
+    text-decoration-thickness: 0.14em;
   }
 </style>
