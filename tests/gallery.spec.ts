@@ -30,11 +30,11 @@ test.describe('Event Gallery', () => {
     await expect(eventCard.getByRole('img', { name: /Cover photo from/ })).toBeVisible();
   });
 
-  test('React Native Conference 2024 event page displays correctly', async ({ page }) => {
+  test('RNLConf 2024 photobooth event page displays correctly', async ({ page }) => {
     await page.goto('/events/react-native-conf-2024');
 
     // Check event title (using getByRole)
-    await expect(page.getByRole('heading', { name: /React Native Photobooth/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /RNLConf 2024 Photobooth/i })).toBeVisible();
 
     // Check breadcrumb navigation (using getByRole with accessible name)
     const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' });
@@ -85,7 +85,7 @@ test.describe('Event Gallery', () => {
     const eventCard = page.getByRole('article').first();
 
     // Look for photo count text (using getByText)
-    await expect(eventCard.getByText(/\d+ photos?/i)).toBeVisible();
+    await expect(eventCard.getByText(/^\d+ photos?$/i)).toBeVisible();
   });
 
   test('home page opens on selected photographs that link to their frame', async ({ page }) => {

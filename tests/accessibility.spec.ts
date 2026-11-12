@@ -150,7 +150,7 @@ test.describe('Accessibility - Semantic HTML', () => {
     // Should have exactly one h1
     const h1s = page.getByRole('heading', { level: 1 });
     await expect(h1s).toHaveCount(1);
-    await expect(h1s).toContainText('React Native Photobooth');
+    await expect(h1s).toContainText('RNLConf 2024 Photobooth');
   });
 
   test('images have alt text', async ({ page }) => {

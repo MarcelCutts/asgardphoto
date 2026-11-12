@@ -238,6 +238,16 @@ const ogImageUrl = selects[0]
     transform: none;
   }
 
+  /* No hover on touch screens and phones: keep the event name showing */
+  @media (hover: none), (max-width: 899px) {
+    .tile-caption {
+      opacity: 1;
+      transform: none;
+      font-size: 0.8125rem;
+      padding: 0.25rem 0.5rem 0.3rem;
+    }
+  }
+
   /* Desktop: two bands, nine frames, every cell filled */
   @media (min-width: 900px) {
     .tile:nth-child(1) {

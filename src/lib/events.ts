@@ -34,8 +34,24 @@ export function sampleFrames(event: EventEntry, count: number): string[] {
   return [event.data.cover, ...picks];
 }
 
+const SHORT_MONTHS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+] as const;
+
 export function formatMonthYear(date: Date): string {
-  return date.toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+  // Fixed three-letter months: en-GB's short month is "Sept", which breaks the column
+  return `${SHORT_MONTHS[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
 }
 
 export function formatLongDate(date: Date): string {
