@@ -52,14 +52,22 @@ test.describe('Accessibility - Keyboard Navigation', () => {
     await logo.focus();
     await expect(logo).toBeFocused();
 
-    // Tab to the cross-site masthead link
+    // Tab through the masthead links
+    const nav = page.getByRole('navigation', { name: 'Main navigation' });
     await page.keyboard.press('Tab');
-    await expect(page.getByRole('link', { name: 'Asgard.tech' })).toBeFocused();
+    await expect(nav.getByRole('link', { name: 'Events' })).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(nav.getByRole('link', { name: 'Hire' })).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(nav.getByRole('link', { name: 'Asgard.tech' })).toBeFocused();
 
-    // Tab to first event card
+    // Tab to the first selected photograph
     await page.keyboard.press('Tab');
-    const firstEventLink = page.getByRole('article').first().getByRole('link');
-    await expect(firstEventLink).toBeFocused();
+    const firstSelect = page
+      .getByRole('list', { name: 'Selected photographs' })
+      .getByRole('link')
+      .first();
+    await expect(firstSelect).toBeFocused();
   });
 
   test('can navigate photos with keyboard', async ({ page }) => {
@@ -133,7 +141,7 @@ test.describe('Accessibility - Semantic HTML', () => {
     // Should have exactly one h1 (using getByRole)
     const h1s = page.getByRole('heading', { level: 1 });
     await expect(h1s).toHaveCount(1);
-    await expect(h1s).toHaveText('Asgard.photo');
+    await expect(h1s).toHaveText('Photographs from the JavaScript conference circuit');
   });
 
   test('event page has proper heading hierarchy', async ({ page }) => {
@@ -238,6 +246,8 @@ test.describe('Accessibility - Focus Management', () => {
     // Tab through all focusable elements in lightbox
     await page.keyboard.press('Tab'); // prev button
     await page.keyboard.press('Tab'); // next button
+    await page.keyboard.press('Tab'); // copy link
+    await page.keyboard.press('Tab'); // full size
     await page.keyboard.press('Tab'); // should wrap back to close button
 
     const closeButton = page.getByRole('button', { name: 'Close photo viewer' });

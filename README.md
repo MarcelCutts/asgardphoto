@@ -6,7 +6,8 @@ Conference photography portfolio website built with Astro and Cloudflare.
 
 - Responsive photo gallery with native `<dialog>` lightbox
 - On-demand image optimization via Cloudflare Image Resizing (WebP/AVIF, multiple sizes)
-- "The Archive" design system — dark-only sibling of [asgard.tech](https://asgard.tech), with self-hosted Instrument Serif / Schibsted Grotesk / IBM Plex Mono
+- "House lights down" design (see [Design](#design)): one self-hosted variable face, Mona Sans, shared with [asgard.tech](https://asgard.tech)
+- Every photo has its own link (`/events/<slug>/#photo-12`) with Copy link and Full size in the lightbox
 - Accessibility-first design (WCAG 2.1 AA compliant)
 - SEO optimized (Open Graph, JSON-LD structured data, sitemap)
 - Zero JavaScript by default (except lightbox interactivity)
@@ -31,6 +32,19 @@ photos:
 Image paths are relative to the R2 bucket root (`photos.asgard.photo`).
 
 3. Commit and push - Cloudflare Pages will auto-deploy.
+
+## Choosing the home page photos
+
+The photos that open the home page are listed in `src/lib/selects.ts`: an event id, the photo's position in that event's `photos` list (from 0) and alt text describing the picture. Positions 1, 3, 4 and 9 on the wall are tall tiles, the rest are wide.
+
+## Design
+
+**House lights down.** The page behaves like the room when the lights drop: a neutral near-black (`#0d0d0e`) that doesn't tint the photographs, and type that steps back so the pictures are the light source.
+
+- **Type:** Mona Sans only (variable, weight 200 to 900, width 75 to 125%). Narrow and heavy (`.display`) for event names, like a festival lineup; normal width for reading; semi-condensed for small labels. No all-caps, no monospace.
+- **Colour:** the one accent is signal red `#e0301e`, shared with asgard.tech, used like a camera tally light: the rune, the dot that lights beside the event or photo you're about to open, and focus rings (`#ff5a47` where it has to carry small text).
+- **Shared with asgard.tech:** the Ansuz rune, Mona Sans and the signal red. Ground colour, layout and display treatment are each site's own.
+- **Hierarchy:** photos first (selects wall), then the events lineup grouped by year with a strip of real frames per event, then how to book. Event pages put the title and facts beside each other so the grid starts high, and end with links to the older and newer event.
 
 ## Development
 

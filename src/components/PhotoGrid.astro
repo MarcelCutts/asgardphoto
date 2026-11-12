@@ -13,24 +13,24 @@ const { photos, eventTitle } = Astro.props;
 const lightboxImages = photos.map((photo) => ({
   src: getImageUrl(photo, { width: 1600, quality: 90, format: 'auto' }),
   srcset: getSrcSet(photo, RESPONSIVE_WIDTHS.lightbox, { quality: 90, format: 'auto' }),
+  // Largest rendition, as JPEG so it saves and shares anywhere
+  full: getImageUrl(photo, { width: 4000, quality: 92, format: 'jpeg', fit: 'scale-down' }),
 }));
 ---
 
-<div class="photo-grid-wrapper" role="list" aria-label={`Photos from ${eventTitle}`}>
+<div class="photo-grid-wrapper frame" role="list" aria-label={`Photos from ${eventTitle}`}>
   <Masonry
     breakpointCols={{
       default: 4,
-      1400: 4,
-      1024: 3,
-      640: 2,
-      480: 1,
+      1100: 3,
+      700: 2,
     }}
     class="photo-grid"
     columnClass="photo-column"
   >
     {
       photos.map((photo, index) => (
-        <figure class="photo-item" role="listitem">
+        <figure class="photo-item" role="listitem" id={`photo-${index + 1}`}>
           <button
             type="button"
             class="photo-button"
@@ -40,7 +40,7 @@ const lightboxImages = photos.map((photo) => ({
             <img
               src={getImageUrl(photo, { width: 800, format: 'auto' })}
               srcset={getSrcSet(photo, RESPONSIVE_WIDTHS.grid, { format: 'auto' })}
-              sizes="(max-width: 480px) 100vw, (max-width: 640px) 50vw, (max-width: 1024px) 33vw, 240px"
+              sizes="(max-width: 700px) 50vw, (max-width: 1100px) 33vw, 25vw"
               alt={`Photo ${index + 1} from ${eventTitle}`}
               loading={index < 8 ? 'eager' : 'lazy'}
               decoding="async"
@@ -68,8 +68,9 @@ const lightboxImages = photos.map((photo) => ({
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        stroke-width="1.5"
+        stroke-width="1.75"
         stroke-linecap="square"
+        aria-hidden="true"
       >
         <path d="M18 6L6 18M6 6l12 12"></path>
       </svg>
@@ -81,15 +82,16 @@ const lightboxImages = photos.map((photo) => ({
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        stroke-width="1.5"
+        stroke-width="1.75"
         stroke-linecap="square"
+        aria-hidden="true"
       >
         <path d="M15 18l-6-6 6-6"></path>
       </svg>
     </button>
     <div class="lightbox-image-container">
       <div class="lightbox-spinner" aria-hidden="true" data-testid="loading-spinner">
-        <svg viewBox="0 0 24 24" width="48" height="48">
+        <svg viewBox="0 0 24 24" width="40" height="40">
           <circle
             cx="12"
             cy="12"
@@ -109,13 +111,23 @@ const lightboxImages = photos.map((photo) => ({
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        stroke-width="1.5"
+        stroke-width="1.75"
         stroke-linecap="square"
+        aria-hidden="true"
       >
         <path d="M9 18l6-6-6-6"></path>
       </svg>
     </button>
-    <div class="lightbox-counter" aria-live="polite" data-testid="lightbox-counter"></div>
+    <div class="lightbox-bar">
+      <div class="lightbox-counter" aria-live="polite" data-testid="lightbox-counter"></div>
+      <div class="lightbox-actions">
+        <button type="button" class="lightbox-action lightbox-copy">Copy link</button>
+        <a class="lightbox-action lightbox-full" href="#" target="_blank" rel="noopener"
+          >Full size<span class="visually-hidden"> (opens in a new tab)</span></a
+        >
+      </div>
+      <p class="lightbox-status visually-hidden" role="status"></p>
+    </div>
   </div>
 </dialog>
 
@@ -132,7 +144,7 @@ const lightboxImages = photos.map((photo) => ({
     // Non-nullable reference for use in closures
     const lightbox = lightboxEl;
 
-    const photos: Array<{ src: string; srcset: string }> = JSON.parse(photosData);
+    const photos: Array<{ src: string; srcset: string; full: string }> = JSON.parse(photosData);
 
     const lightboxImage = document.getElementById('lightbox-image') as HTMLImageElement;
     const lightboxContent = document.querySelector('.lightbox-content') as HTMLElement;
@@ -141,6 +153,9 @@ const lightboxImages = photos.map((photo) => ({
     const closeBtn = document.querySelector('.lightbox-close') as HTMLButtonElement;
     const prevBtn = document.querySelector('.lightbox-prev') as HTMLButtonElement;
     const nextBtn = document.querySelector('.lightbox-next') as HTMLButtonElement;
+    const copyBtn = document.querySelector('.lightbox-copy') as HTMLButtonElement;
+    const fullLink = document.querySelector('.lightbox-full') as HTMLAnchorElement;
+    const statusEl = document.querySelector('.lightbox-status') as HTMLElement;
     const photoButtons = document.querySelectorAll('.photo-button');
 
     let currentIndex = 0;
@@ -177,9 +192,15 @@ const lightboxImages = photos.map((photo) => ({
 
     function updateLightbox(index: number) {
       currentIndex = index;
-      lightboxCounter.textContent = `FR. ${index + 1} / ${photos.length}`;
+      lightboxCounter.textContent = `${index + 1} / ${photos.length}`;
+      statusEl.textContent = '';
 
-      const { src, srcset } = photos[index];
+      const { src, srcset, full } = photos[index];
+      fullLink.href = full;
+
+      // Every photo has its own address, so the one you're looking at is
+      // the one you share. replaceState keeps the ClientRouter's state.
+      history.replaceState(history.state, '', `#photo-${index + 1}`);
 
       // Show loading state
       showLoading();
@@ -205,8 +226,8 @@ const lightboxImages = photos.map((photo) => ({
       preloadAdjacent(index);
     }
 
-    function openLightbox(index: number) {
-      previouslyFocused = document.activeElement;
+    function openLightbox(index: number, trigger: Element | null = document.activeElement) {
+      previouslyFocused = trigger;
       updateLightbox(index);
       lightbox.showModal();
       closeBtn.focus();
@@ -241,7 +262,22 @@ const lightboxImages = photos.map((photo) => ({
     // Teardown lives on the close event so every dismissal runs it — the
     // close button, Escape (native cancel), and Android's back gesture /
     // CloseWatcher, which never touch the keydown handler.
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        statusEl.textContent = 'Link copied';
+        copyBtn.textContent = 'Link copied';
+      } catch {
+        statusEl.textContent = 'Could not copy. The link is in the address bar.';
+        copyBtn.textContent = 'Copy from address bar';
+      }
+      window.setTimeout(() => {
+        copyBtn.textContent = 'Copy link';
+      }, 2000);
+    });
+
     lightbox.addEventListener('close', () => {
+      history.replaceState(history.state, '', window.location.pathname + window.location.search);
       lightboxImage.removeAttribute('src');
       lightboxImage.removeAttribute('srcset');
       hideLoading();
@@ -288,20 +324,30 @@ const lightboxImages = photos.map((photo) => ({
       if (e.key === 'ArrowLeft') showPrev();
       else if (e.key === 'ArrowRight') showNext();
       else if (e.key === 'Tab') {
-        const focusable = [closeBtn, prevBtn, nextBtn];
-        const idx = focusable.indexOf(document.activeElement as HTMLButtonElement);
+        const focusable: HTMLElement[] = [closeBtn, prevBtn, nextBtn, copyBtn, fullLink];
+        const idx = focusable.indexOf(document.activeElement as HTMLElement);
+        const last = focusable.length - 1;
         if (idx === -1) {
           e.preventDefault();
           closeBtn.focus();
         } else if (e.shiftKey && idx === 0) {
           e.preventDefault();
-          nextBtn.focus();
-        } else if (!e.shiftKey && idx === 2) {
+          focusable[last].focus();
+        } else if (!e.shiftKey && idx === last) {
           e.preventDefault();
           closeBtn.focus();
         }
       }
     });
+
+    // Deep link: /events/<slug>/#photo-12 opens straight onto that photo
+    const match = /^#photo-(\d+)$/.exec(window.location.hash);
+    if (match) {
+      const index = parseInt(match[1], 10) - 1;
+      if (index >= 0 && index < photos.length) {
+        openLightbox(index, document.querySelector(`.photo-button[data-index="${index}"]`));
+      }
+    }
   }
 
   // Initialize on page load (works with View Transitions / ClientRouter)
@@ -310,46 +356,57 @@ const lightboxImages = photos.map((photo) => ({
 
 <style>
   .photo-grid-wrapper {
-    padding-block: var(--space-md) var(--space-lg);
+    /* Masonry columns carry half the gap each side; pull the outer halves back */
+    --gap: 6px;
+    padding-inline: calc(var(--gutter) - var(--gap) / 2);
   }
 
-  /* Masonry column styling */
   :global(.photo-column) {
-    padding: 0 calc(var(--space-sm) / 2);
-  }
-
-  @media (min-width: 768px) {
-    :global(.photo-column) {
-      padding: 0 calc(var(--space-md) / 2);
-    }
+    padding: 0 calc(var(--gap) / 2);
   }
 
   .photo-item {
-    margin: 0 0 var(--space-sm) 0;
+    margin: 0 0 var(--gap) 0;
+    scroll-margin-top: 1rem;
   }
 
-  @media (min-width: 768px) {
-    .photo-item {
-      margin-bottom: var(--space-md);
+  @media (max-width: 700px) {
+    .photo-grid-wrapper {
+      --gap: 4px;
     }
   }
 
   .photo-button {
+    position: relative;
     display: block;
     width: 100%;
     padding: 0;
     border: none;
     background: transparent;
-    cursor: pointer;
+    cursor: zoom-in;
   }
 
-  .photo-button:hover {
-    outline: 1px solid var(--vermilion);
-    outline-offset: 2px;
+  /* Hover: a hairline frame and the tally dot, the photo itself stays put */
+  .photo-button::after {
+    content: '';
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--signal);
+    opacity: 0;
+    transition: opacity 140ms ease;
+  }
+
+  .photo-button:hover::after,
+  .photo-button:focus-visible::after {
+    opacity: 1;
   }
 
   .photo-button:focus-visible {
-    outline: 2px solid var(--vermilion);
+    outline: 2px solid var(--signal-text);
     outline-offset: 2px;
   }
 
@@ -357,21 +414,23 @@ const lightboxImages = photos.map((photo) => ({
     width: 100%;
     height: auto;
     display: block;
-    background: var(--ink-high);
+    background: var(--ground-raised);
   }
 
-  /* Lightbox: darkroom chrome */
+  /* ---- Lightbox ---- */
+
   .lightbox {
     position: fixed;
     inset: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     max-width: none;
     max-height: none;
     padding: 0;
     border: none;
-    background: rgba(22, 19, 13, 0.96);
-    color: var(--bone);
+    background: #050505;
+    color: var(--text);
     overscroll-behavior: contain;
   }
 
@@ -383,12 +442,12 @@ const lightboxImages = photos.map((photo) => ({
   }
 
   @media (prefers-reduced-motion: no-preference) {
-    .lightbox {
-      animation: lightboxFadeIn 0.2s ease-out;
+    .lightbox[open] {
+      animation: lightbox-in 180ms ease-out;
     }
   }
 
-  @keyframes lightboxFadeIn {
+  @keyframes lightbox-in {
     from {
       opacity: 0;
     }
@@ -408,12 +467,13 @@ const lightboxImages = photos.map((photo) => ({
     align-items: center;
     justify-content: center;
     position: relative;
+    padding-bottom: 3.5rem;
   }
 
   .lightbox-image-container {
     position: relative;
-    max-width: calc(100vw - 120px);
-    max-height: calc(100vh - 80px);
+    max-width: calc(100vw - 8rem);
+    max-height: calc(100dvh - 6rem);
     min-width: 100px;
     min-height: 100px;
     display: flex;
@@ -423,7 +483,7 @@ const lightboxImages = photos.map((photo) => ({
 
   .lightbox-spinner {
     position: absolute;
-    color: var(--bone-soft);
+    color: var(--text-soft);
     opacity: 0;
     transition: opacity 0.15s ease-out;
     pointer-events: none;
@@ -440,9 +500,6 @@ const lightboxImages = photos.map((photo) => ({
   }
 
   @keyframes spin {
-    from {
-      transform: rotate(0deg);
-    }
     to {
       transform: rotate(360deg);
     }
@@ -450,7 +507,7 @@ const lightboxImages = photos.map((photo) => ({
 
   .lightbox-image {
     max-width: 100%;
-    max-height: calc(100vh - 80px);
+    max-height: calc(100dvh - 6rem);
     object-fit: contain;
     transition: opacity 0.15s ease-out;
   }
@@ -463,65 +520,116 @@ const lightboxImages = photos.map((photo) => ({
   .lightbox-prev,
   .lightbox-next {
     position: absolute;
-    background: rgba(22, 19, 13, 0.55);
-    border: 1px solid var(--rule);
-    color: var(--bone);
-    padding: var(--space-sm);
+    display: grid;
+    place-items: center;
+    width: 3rem;
+    height: 3rem;
+    background: transparent;
+    border: none;
+    color: var(--text);
     cursor: pointer;
-    transition:
-      border-color 160ms ease,
-      color 160ms ease;
-  }
-
-  .lightbox-close svg,
-  .lightbox-prev svg,
-  .lightbox-next svg {
-    display: block;
+    border-radius: 50%;
+    transition: background-color 140ms ease;
   }
 
   .lightbox-close:hover,
   .lightbox-prev:hover,
   .lightbox-next:hover {
-    border-color: var(--vermilion);
-    color: var(--vermilion);
-  }
-
-  .lightbox-close:focus-visible,
-  .lightbox-prev:focus-visible,
-  .lightbox-next:focus-visible {
-    outline: 2px solid var(--vermilion);
-    outline-offset: 2px;
+    background: rgba(237, 236, 232, 0.12);
   }
 
   .lightbox-close {
-    top: var(--space-md);
-    right: var(--space-md);
+    top: 0.75rem;
+    right: 0.75rem;
   }
 
   .lightbox-prev {
-    left: var(--space-md);
+    left: 0.75rem;
     top: 50%;
     transform: translateY(-50%);
   }
 
   .lightbox-next {
-    right: var(--space-md);
+    right: 0.75rem;
     top: 50%;
     transform: translateY(-50%);
   }
 
-  .lightbox-counter {
+  .lightbox-bar {
     position: absolute;
-    bottom: var(--space-md);
-    left: 50%;
-    transform: translateX(-50%);
-    font-family: var(--mono);
-    font-size: 0.78rem;
-    font-weight: 500;
-    letter-spacing: 0.09em;
-    color: var(--bone);
-    background: rgba(22, 19, 13, 0.85);
-    border: 1px solid var(--rule-faint);
-    padding: 0.35rem 0.7rem;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 3.5rem;
+    padding: 0.5rem clamp(1rem, 3vw, 1.5rem);
+    font-stretch: 87.5%;
+  }
+
+  .lightbox-counter {
+    font-weight: 560;
+    color: var(--text-soft);
+  }
+
+  .lightbox-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .lightbox-action {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.5rem;
+    padding: 0 1rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-weight: 560;
+    cursor: pointer;
+    transition:
+      border-color 140ms ease,
+      background-color 140ms ease;
+  }
+
+  .lightbox-action:hover {
+    border-color: var(--text);
+  }
+
+  .lightbox-full {
+    background: var(--text);
+    border-color: var(--text);
+    color: var(--ground);
+  }
+
+  .lightbox-full:hover {
+    background: #fff;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 600px) {
+    .lightbox-image-container {
+      max-width: 100vw;
+    }
+
+    .lightbox-prev,
+    .lightbox-next {
+      top: auto;
+      bottom: 4rem;
+      transform: none;
+      background: rgba(5, 5, 5, 0.6);
+    }
   }
 </style>

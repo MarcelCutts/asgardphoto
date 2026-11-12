@@ -195,4 +195,36 @@ test.describe('Lightbox', () => {
 
     expect(await page.evaluate(() => window.scrollY)).toBe(before);
   });
+
+  test('each photo has its own link, and that link opens straight onto it', async ({ page }) => {
+    await getPhotoButton(page, 4).click();
+    await expect(page).toHaveURL(/#photo-5$/);
+
+    await page.getByRole('button', { name: 'Next photo' }).click();
+    await expect(page).toHaveURL(/#photo-6$/);
+
+    // Closing drops the fragment so a reload doesn't reopen the viewer
+    await page.keyboard.press('Escape');
+    await expect(page).not.toHaveURL(/#photo-/);
+
+    await page.goto(`/events/${TEST_EVENT_SLUG}/#photo-12`);
+    await expect(page.locator('#lightbox')).toBeVisible();
+    await expect(page.getByTestId('lightbox-counter')).toHaveText(
+      frameCounter(12, TEST_EVENT_PHOTO_COUNT)
+    );
+  });
+
+  test('offers a full-size version and a copyable link', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await getPhotoButton(page, 0).click();
+
+    await expect(page.getByRole('link', { name: /Full size/ })).toHaveAttribute(
+      'href',
+      /cdn-cgi\/image\/.*format=jpeg/
+    );
+
+    await page.getByRole('button', { name: 'Copy link' }).click();
+    await expect(page.getByRole('status')).toHaveText('Link copied');
+    expect(await page.evaluate(() => window.navigator.clipboard.readText())).toMatch(/#photo-1$/);
+  });
 });
