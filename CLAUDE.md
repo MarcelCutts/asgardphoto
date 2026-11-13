@@ -13,10 +13,10 @@ Conference photography archive at asgard.photo. Astro 5 static site. Photos live
 ## Layout
 
 - `src/content/events/*.yaml`: one file per event, schema in `src/content.config.ts`. Adding an event is adding a YAML file (see README); image paths are relative to the R2 bucket root.
-- `src/lib/images.ts`: R2 + Image Resizing URL and srcset helpers. `src/lib/rolls.ts`: stable archive roll numbers.
-- `src/components/PhotoGrid.astro`: masonry grid and the `<dialog>` lightbox. `tests/fixtures.ts` depends on its DOM (`data-index`, the `FR. n / N` counter); change them together.
-- `src/layouts/BaseLayout.astro`: shared head, masthead (persisted across view transitions), design tokens.
-- `tests/`: Playwright specs (axe-core accessibility, gallery, lightbox, responsive, rolls). Details in `tests/README.md`.
+- `src/lib/images.ts`: R2 + Image Resizing URL and srcset helpers. `src/lib/events.ts`: sorting, year grouping, index strip sampling and date formats. `src/lib/selects.ts`: the hand-picked photos (with alt text) that open the home page.
+- `src/components/PhotoGrid.astro`: masonry grid and the `<dialog>` lightbox. `tests/fixtures.ts` depends on its DOM (`data-index`, the `n / N` counter). Photos deep-link as `/events/<slug>/#photo-<n>` (1-based); the home page selects link to these, and asgard.tech links to `/events/<slug>/`, so keep both formats.
+- `src/layouts/BaseLayout.astro`: shared head, masthead (persisted across view transitions), design tokens. Design notes in `README.md#design`.
+- `tests/`: Playwright specs (axe-core accessibility, gallery, lightbox, responsive). Details in `tests/README.md`.
 
 ## Rules
 
