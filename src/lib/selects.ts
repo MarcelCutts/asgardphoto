@@ -52,10 +52,10 @@ export const SELECTS: readonly Select[] = [
     focus: 'center 20%',
   },
   {
-    event: 'cityjs-berlin-2023',
-    photo: 5,
-    alt: 'Two attendees with their arms round each other, both grinning, warm lights behind them',
-    focus: 'center 25%',
+    event: 'jsnation-react-summit-2022',
+    photo: 55,
+    alt: 'A packed hall under green lasers, with giant screens above the stage',
+    focus: '12% center',
   },
   {
     event: 'svelte-summit-2022',
