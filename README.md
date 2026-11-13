@@ -35,7 +35,7 @@ Image paths are relative to the R2 bucket root (`photos.asgard.photo`).
 
 ## Choosing the home page photos
 
-The photos that open the home page are listed in `src/lib/selects.ts`: an event id, the photo's position in that event's `photos` list (from 0) and alt text describing the picture. Positions 1, 3, 4 and 9 on the wall are tall tiles, the rest are wide.
+The photos that open the home page are listed in `src/lib/selects.ts`: an event id, the photo's position in that event's `photos` list (from 0) and alt text describing the picture. On desktop, positions 1, 3, 4 and 9 are tall tiles and the rest are wide; phones show the first six, with 1, 3, 4 and 6 tall. Optional fields: `focus` (a CSS `object-position` to steer the crop) and `share` (use this frame as the 1200×630 share image; pick a landscape one).
 
 ## Design
 

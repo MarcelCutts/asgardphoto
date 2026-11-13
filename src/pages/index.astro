@@ -26,8 +26,11 @@ const selects = SELECTS.flatMap((select) => {
   return [{ ...select, path: photo, title: event.data.title, slug: event.id }];
 });
 
-const ogImageUrl = selects[0]
-  ? getImageUrl(selects[0].path, { width: 1200, height: 630, fit: 'cover', format: 'jpeg' })
+// The share image is cropped to 1200x630, so it comes from a select marked
+// `share` (a landscape frame) rather than the tall first tile
+const shareSelect = selects.find((select) => select.share) ?? selects[0];
+const ogImageUrl = shareSelect
+  ? getImageUrl(shareSelect.path, { width: 1200, height: 630, fit: 'cover', format: 'jpeg' })
   : undefined;
 ---
 
@@ -35,7 +38,7 @@ const ogImageUrl = selects[0]
   title="Conference photography"
   description="Photographs from tech conferences and meetups across Europe, by Marcel Cutts."
   ogImage={ogImageUrl}
-  ogImageAlt={selects[0]?.alt}
+  ogImageAlt={shareSelect?.alt}
 >
   <section class="intro frame" aria-labelledby="intro-heading">
     <h1 id="intro-heading" class="intro-title display">
@@ -69,6 +72,7 @@ const ogImageUrl = selects[0]
                 fetchpriority={i === 0 ? 'high' : undefined}
                 decoding="async"
                 class="tile-image"
+                style={select.focus ? `object-position: ${select.focus}` : undefined}
               />
               <span class="tile-caption">{select.title}</span>
             </a>
