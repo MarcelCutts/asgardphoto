@@ -29,8 +29,7 @@ jobs:
 
   e2e:
     name: Playwright
-    # Pinned: Playwright 1.57 can't install browsers on ubuntu-latest (now 26.04)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
