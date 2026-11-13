@@ -68,8 +68,8 @@ export const SELECTS: readonly Select[] = [
     alt: 'A woman with a short bob smiling softly in magenta and blue light',
   },
   {
-    event: 'jsnation-2023',
-    photo: 13,
-    alt: 'An attendee in headphones working on a laptop in a hanging wicker chair',
+    event: 'jsnation-react-summit-2022',
+    photo: 72,
+    alt: 'A man in sunglasses grinning as he lounges in a pool of pale blue ball-pit balls',
   },
 ];
