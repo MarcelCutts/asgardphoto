@@ -1,189 +1,491 @@
 ---
-import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import EventCard from '../components/EventCard.astro';
-import { getImageUrl } from '../lib/images';
-import { rollMap } from '../lib/rolls';
+import { getImageUrl, getSrcSet, RESPONSIVE_WIDTHS } from '../lib/images';
+import {
+  getSortedEvents,
+  groupByYear,
+  sampleFrames,
+  formatMonthYear,
+  photoCountLabel,
+} from '../lib/events';
+import { SELECTS } from '../lib/selects';
 
-const events = await getCollection('events');
-const rolls = rollMap(events);
+const events = await getSortedEvents();
+const byId = new Map(events.map((event) => [event.id, event]));
+const years = groupByYear(events);
 
-// Sort events by date, newest first (roll numbers read descending)
-const sortedEvents = events.sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+const totalPhotos = events.reduce((sum, event) => sum + (event.data.photos?.length ?? 0), 0);
+const cities = [...new Set(events.map((event) => event.data.location.split(',')[0].trim()))];
+const firstYear = years.at(-1)?.[0];
+const lastYear = years[0]?.[0];
 
-const totalFrames = events.reduce((sum, event) => sum + (event.data.photos?.length ?? 0), 0);
-const rollCount = String(events.length).padStart(3, '0');
+const selects = SELECTS.flatMap((select) => {
+  const event = byId.get(select.event);
+  const photo = event?.data.photos?.[select.photo];
+  if (!event || !photo) return [];
+  return [{ ...select, path: photo, title: event.data.title, slug: event.id }];
+});
 
-// Use the most recent event's cover as the OG image for the homepage
-const ogImageUrl =
-  sortedEvents.length > 0
-    ? getImageUrl(sortedEvents[0].data.cover, {
-        width: 1200,
-        height: 630,
-        fit: 'cover',
-        format: 'jpeg',
-      })
-    : undefined;
+// The share image is cropped to 1200x630, so it comes from a select marked
+// `share` (a landscape frame) rather than the tall first tile
+const shareSelect = selects.find((select) => select.share) ?? selects[0];
+const ogImageUrl = shareSelect
+  ? getImageUrl(shareSelect.path, { width: 1200, height: 630, fit: 'cover', format: 'jpeg' })
+  : undefined;
 ---
 
 <BaseLayout
-  title="Conference Photography"
-  description="Photography from tech conferences and developer events."
+  title="Conference photography"
+  description="Photographs from tech conferences and meetups across Europe, by Marcel Cutts."
   ogImage={ogImageUrl}
-  ogImageAlt={sortedEvents.length > 0
-    ? `Cover photo from ${sortedEvents[0].data.title}`
-    : undefined}
+  ogImageAlt={shareSelect?.alt}
 >
-  <Fragment slot="head">
-    <!-- The hero tagline is serif italic, above the fold -->
-    <link
-      rel="preload"
-      href="/fonts/InstrumentSerif-Italic.woff2"
-      as="font"
-      type="font/woff2"
-      crossorigin
-    />
-  </Fragment>
-
-  <section class="hero container">
-    <h1 class="wordmark">Asgard<span class="wordmark-ext">.photo</span></h1>
-    <p class="tagline">The photographic record of the tech conference circuit.</p>
-    <div class="hero-meta apparatus">
-      <span>Rolls {rollCount} &middot; Frames {totalFrames}</span>
-      <svg class="rune" viewBox="0 0 24 32" aria-hidden="true">
-        <path d="M7 2v28M7 5l13 8M7 14l13 8"></path>
-      </svg>
+  <section class="intro frame" aria-labelledby="intro-heading">
+    <h1 id="intro-heading" class="intro-title display">
+      Photographs from the tech conference circuit
+    </h1>
+    <div class="intro-aside">
+      <p class="intro-lede">
+        I spent years on these stages as a speaker and MC. Now I photograph them: the talks, the
+        hallway, and the people who build the software, whatever they write it in.
+      </p>
+      <p class="intro-facts label">
+        {events.length} events &middot; {totalPhotos.toLocaleString('en-GB')} photos &middot; {
+          cities.join(', ')
+        } &middot; <span class="nowrap">{firstYear}&ndash;{lastYear}</span>
+      </p>
     </div>
   </section>
 
-  <section class="events-section container" aria-labelledby="events-heading">
-    <div class="events-strip apparatus">
-      <h2 id="events-heading" class="apparatus">Index of rolls</h2>
-      <span class="events-order">Newest first</span>
+  {
+    selects.length > 0 && (
+      <ul class="wall frame" role="list" aria-label="Selected photographs">
+        {selects.map((select, i) => (
+          <li class="tile">
+            <a href={`/events/${select.slug}/#photo-${select.photo + 1}`} class="tile-link">
+              <img
+                src={getImageUrl(select.path, { width: 800, format: 'auto' })}
+                srcset={getSrcSet(select.path, RESPONSIVE_WIDTHS.cover, { format: 'auto' })}
+                sizes="(min-width: 900px) 42vw, 100vw"
+                alt={select.alt}
+                loading={i < 6 ? 'eager' : 'lazy'}
+                fetchpriority={i === 0 ? 'high' : undefined}
+                decoding="async"
+                class="tile-image"
+                style={select.focus ? `object-position: ${select.focus}` : undefined}
+              />
+              <span class="tile-caption">{select.title}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
+  <section id="events" class="lineup frame" aria-labelledby="events-heading">
+    <div class="lineup-head">
+      <h2 id="events-heading" class="lineup-title display">Events</h2>
+      <p class="label">Newest first. Find yours, then find yourself.</p>
     </div>
+
     {
-      sortedEvents.length > 0 ? (
-        <div class="events-grid">
-          {sortedEvents.map((event) => (
-            <EventCard
-              slug={event.id}
-              rollNo={rolls.get(event.id) ?? ''}
-              title={event.data.title}
-              date={event.data.date}
-              location={event.data.location}
-              cover={event.data.cover}
-              photoCount={event.data.photos?.length}
-            />
-          ))}
-        </div>
-      ) : (
-        <p class="no-events">No rolls filed yet.</p>
-      )
+      years.map(([year, yearEvents]) => (
+        <section class="year" aria-labelledby={`year-${year}`}>
+          <h3 id={`year-${year}`} class="year-label display">
+            {year}
+          </h3>
+          <ul class="year-events" role="list">
+            {yearEvents.map((event) => {
+              const frames = sampleFrames(event, 4);
+              const count = event.data.photos?.length ?? 0;
+              return (
+                <li>
+                  <article class="event">
+                    <div class="event-text">
+                      <h4 class="event-title display">
+                        <a href={`/events/${event.id}/`} class="event-link">
+                          {event.data.title}
+                        </a>
+                      </h4>
+                      <p class="event-meta">
+                        <span>{event.data.location}</span>
+                        <span aria-hidden="true">&middot;</span>
+                        <span>{formatMonthYear(event.data.date)}</span>
+                        <span aria-hidden="true">&middot;</span>
+                        <span>{photoCountLabel(count)}</span>
+                      </p>
+                    </div>
+                    <div class="event-strip">
+                      {frames.map((frame, f) => (
+                        <img
+                          src={getImageUrl(frame, { width: 400, format: 'auto' })}
+                          srcset={getSrcSet(frame, RESPONSIVE_WIDTHS.grid, { format: 'auto' })}
+                          sizes="(min-width: 900px) 12vw, 24vw"
+                          alt={f === 0 ? `Cover photo from ${event.data.title}` : ''}
+                          loading="lazy"
+                          decoding="async"
+                          class="strip-image"
+                          width="400"
+                          height="267"
+                        />
+                      ))}
+                    </div>
+                  </article>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))
     }
+  </section>
+
+  <section id="hire" class="hire frame" aria-labelledby="hire-heading">
+    <span class="tally" aria-hidden="true"></span>
+    <h2 id="hire-heading" class="hire-title display">Running an event?</h2>
+    <p class="hire-body">
+      I photograph tech conferences, meetups and photobooth portraits, mostly in London and around
+      Europe. If you&rsquo;d like yours covered, email me at
+      <a href="mailto:marcel@asgard.tech">marcel@asgard.tech</a>.
+    </p>
   </section>
 </BaseLayout>
 
 <style>
-  .hero {
-    padding-top: clamp(2.5rem, 6vw, 4.25rem);
-    padding-bottom: clamp(1.75rem, 4vw, 3rem);
+  /* ---- Intro ---- */
+
+  .intro {
+    display: grid;
+    grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
+    align-items: end;
+    gap: 1.5rem clamp(2rem, 5vw, 5rem);
+    padding-top: clamp(1.5rem, 5vw, 4.5rem);
+    padding-bottom: clamp(1.25rem, 3vw, 2.25rem);
   }
 
-  .wordmark {
-    font-family: var(--serif);
-    font-weight: 400;
-    font-size: clamp(3.2rem, 10.5vw, 8.5rem);
-    line-height: 0.95;
-    letter-spacing: -0.015em;
-    margin-left: -0.04em;
+  .intro-title {
+    font-size: clamp(2.6rem, 5.4vw, 5.5rem);
+    max-width: 17ch;
   }
 
-  .wordmark-ext {
-    color: var(--vermilion);
+  .intro-lede {
+    max-width: 38ch;
+    font-size: clamp(1.0625rem, 1.4vw, 1.25rem);
+    line-height: 1.45;
   }
 
-  .tagline {
-    margin-top: clamp(1rem, 2.5vw, 1.75rem);
-    max-width: 30ch;
-    font-family: var(--serif);
-    font-style: italic;
-    font-size: clamp(1.35rem, 2.6vw, 1.9rem);
-    line-height: 1.25;
-    text-wrap: balance;
+  .intro-facts {
+    margin-top: 1rem;
   }
 
-  .hero-meta {
+  .nowrap {
+    white-space: nowrap;
+  }
+
+  @media (max-width: 899px) {
+    .intro {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  /* ---- The wall of selects ---- */
+
+  .wall {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-auto-rows: clamp(5.5rem, 9.2vw, 10rem);
+    gap: 6px;
+  }
+
+  .tile {
+    position: relative;
+    overflow: hidden;
+    background: var(--ground-raised);
+  }
+
+  .tile-link {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .tile-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .tile-link:focus-visible {
+    outline-offset: -4px;
+  }
+
+  /* Event name sits in the corner like a slate, shown on hover and focus */
+  .tile-caption {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    padding: 0.35rem 0.65rem 0.4rem;
+    background: var(--ground);
+    font-size: 0.875rem;
+    font-stretch: 87.5%;
+    font-weight: 560;
+    opacity: 0;
+    transform: translateY(4px);
+    transition:
+      opacity 160ms var(--ease),
+      transform 160ms var(--ease);
+  }
+
+  .tile-link:hover .tile-caption,
+  .tile-link:focus-visible .tile-caption {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* No hover on touch screens and phones: keep the event name showing */
+  @media (hover: none), (max-width: 899px) {
+    .tile-caption {
+      opacity: 1;
+      transform: none;
+      font-size: 0.8125rem;
+      padding: 0.25rem 0.5rem 0.3rem;
+    }
+  }
+
+  /* Desktop: two bands, nine frames, every cell filled */
+  @media (min-width: 900px) {
+    .tile:nth-child(1) {
+      grid-area: 1 / 1 / 5 / 5;
+    }
+    .tile:nth-child(2) {
+      grid-area: 1 / 5 / 4 / 10;
+    }
+    .tile:nth-child(3) {
+      grid-area: 1 / 10 / 4 / 13;
+    }
+    .tile:nth-child(4) {
+      grid-area: 4 / 5 / 7 / 8;
+    }
+    .tile:nth-child(5) {
+      grid-area: 4 / 8 / 7 / 13;
+    }
+    .tile:nth-child(6) {
+      grid-area: 5 / 1 / 7 / 5;
+    }
+    .tile:nth-child(7) {
+      grid-area: 7 / 1 / 10 / 6;
+    }
+    .tile:nth-child(8) {
+      grid-area: 7 / 6 / 10 / 10;
+    }
+    .tile:nth-child(9) {
+      grid-area: 7 / 10 / 10 / 13;
+    }
+    .tile:nth-child(n + 10) {
+      display: none;
+    }
+  }
+
+  /* Phones and tablets: two columns, six frames */
+  @media (max-width: 899px) {
+    .wall {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-auto-rows: 42vw;
+      grid-auto-flow: dense;
+      gap: 4px;
+    }
+    .tile:nth-child(1),
+    .tile:nth-child(3),
+    .tile:nth-child(4),
+    .tile:nth-child(6) {
+      grid-row: span 2;
+    }
+    .tile:nth-child(2),
+    .tile:nth-child(5) {
+      grid-column: span 2;
+    }
+    .tile:nth-child(n + 7) {
+      display: none;
+    }
+  }
+
+  /* ---- Lineup ---- */
+
+  .lineup {
+    margin-top: clamp(4rem, 10vw, 8.5rem);
+  }
+
+  .lineup-head {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-sm);
-    margin-top: clamp(1.75rem, 4vw, 3rem);
-    padding-top: 0.7rem;
-    border-top: 1px solid var(--rule);
-    color: var(--bone-soft);
-  }
-
-  .hero-meta .rune {
-    color: var(--vermilion);
-  }
-
-  /* `rise` comes from BaseLayout's global styles */
-  @media (prefers-reduced-motion: no-preference) {
-    .wordmark {
-      animation: rise 700ms var(--ease-brand) 220ms both;
-    }
-
-    .tagline {
-      animation: rise 700ms var(--ease-brand) 340ms both;
-    }
-
-    .hero-meta {
-      animation: rise 700ms var(--ease-brand) 460ms both;
-    }
-  }
-
-  .events-section {
-    padding-bottom: var(--space-xl);
-  }
-
-  .events-strip {
-    display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
     justify-content: space-between;
-    gap: var(--space-sm);
-    padding-top: 0.7rem;
-    border-top: 1px solid var(--rule);
-    margin-bottom: var(--space-lg);
+    gap: 0.5rem 2rem;
+    padding-bottom: 1rem;
   }
 
-  .events-strip h2 {
-    font-weight: 500;
-    color: var(--bone);
+  .lineup-title {
+    font-size: clamp(2.25rem, 5vw, 4.5rem);
   }
 
-  .events-order {
-    color: var(--bone-faint);
-  }
-
-  .events-grid {
+  .year {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: var(--space-lg);
+    grid-template-columns: clamp(4.5rem, 10vw, 9rem) minmax(0, 1fr);
+    gap: 0 clamp(1rem, 3vw, 2.5rem);
+    border-top: 1px solid var(--line-strong);
+    padding-top: 0.75rem;
   }
 
-  @media (max-width: 640px) {
-    .events-grid {
-      grid-template-columns: 1fr;
-      gap: var(--space-md);
+  .year + .year {
+    margin-top: clamp(2rem, 5vw, 3.5rem);
+  }
+
+  .year-label {
+    font-size: clamp(1.75rem, 3.4vw, 3rem);
+    color: var(--text-soft);
+    position: sticky;
+    top: 1rem;
+    align-self: start;
+  }
+
+  .year-events > li + li {
+    border-top: 1px solid var(--line);
+  }
+
+  .event {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: center;
+    gap: 1rem clamp(1.5rem, 3vw, 3rem);
+    padding-block: clamp(0.85rem, 1.6vw, 1.25rem);
+  }
+
+  .event-title {
+    font-size: clamp(1.75rem, 3.6vw, 3.25rem);
+    font-weight: 740;
+    line-height: 0.95;
+  }
+
+  /* Whole row is the link target; the heading's link is stretched over it */
+  .event-link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+
+  .event-link:focus-visible {
+    outline: none;
+  }
+
+  .event:has(.event-link:focus-visible) {
+    outline: 2px solid var(--signal-text);
+    outline-offset: 4px;
+  }
+
+  /* The tally light: a red dot that comes on beside the row you're about to open */
+  .event-text {
+    position: relative;
+  }
+
+  .event-text::before {
+    content: '';
+    position: absolute;
+    left: calc(-0.5rem - 8px);
+    top: 0.85rem;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--signal);
+    opacity: 0;
+    transform: scale(0.4);
+    transition:
+      opacity 160ms var(--ease),
+      transform 160ms var(--ease);
+  }
+
+  .event:hover .event-text::before,
+  .event:has(.event-link:focus-visible) .event-text::before {
+    opacity: 1;
+    transform: none;
+  }
+
+  .event-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 0.5em;
+    margin-top: 0.5rem;
+    font-size: 0.9375rem;
+    font-stretch: 87.5%;
+    color: var(--text-soft);
+  }
+
+  .event-strip {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .strip-image {
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    object-fit: cover;
+    background: var(--ground-raised);
+  }
+
+  @media (max-width: 899px) {
+    .year {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .year-label {
+      position: static;
+      padding-bottom: 0.25rem;
+    }
+
+    .event {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .event-strip {
+      order: -1;
     }
   }
 
-  .no-events {
-    font-family: var(--mono);
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.09em;
-    color: var(--bone-soft);
-    padding: var(--space-xl) 0;
+  /* ---- Hire ---- */
+
+  .hire {
+    margin-top: clamp(4rem, 10vw, 8rem);
+    max-width: calc(var(--measure) + 2 * var(--gutter));
+  }
+
+  .tally {
+    display: block;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+    background: var(--signal);
+    box-shadow: 0 0 0 4px rgba(224, 48, 30, 0.2);
+    margin-bottom: 1.25rem;
+  }
+
+  .hire-title {
+    font-size: clamp(2.25rem, 5vw, 4.5rem);
+  }
+
+  .hire-body {
+    margin-top: 1rem;
+    font-size: clamp(1.0625rem, 1.4vw, 1.25rem);
+    line-height: 1.5;
+    color: var(--text-soft);
+  }
+
+  .hire-body a {
+    color: var(--text);
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: var(--signal);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.2em;
   }
 </style>

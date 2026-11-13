@@ -28,11 +28,11 @@ export const test = base.extend({
 export { expect };
 
 /**
- * Lightbox frame counter format ("FR. 12 / 52").
+ * Lightbox counter format ("12 / 52").
  * Keep in sync with the counter template in PhotoGrid.astro.
  */
 export function frameCounter(current: number, total: number): string {
-  return `FR. ${current} / ${total}`;
+  return `${current} / ${total}`;
 }
 
 /**

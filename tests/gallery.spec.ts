@@ -16,8 +16,10 @@ test.describe('Event Gallery', () => {
   test('home page displays event cards', async ({ page }) => {
     await page.goto('/');
 
-    // Check hero wordmark using getByRole (user-facing locator)
-    await expect(page.getByRole('heading', { name: 'Asgard.photo', level: 1 })).toBeVisible();
+    // Check the page heading using getByRole (user-facing locator)
+    await expect(
+      page.getByRole('heading', { name: /tech conference circuit/, level: 1 })
+    ).toBeVisible();
 
     // Check event card is present (article is semantic)
     const eventCard = page.getByRole('article').first();
@@ -25,23 +27,26 @@ test.describe('Event Gallery', () => {
 
     // Verify event card has required elements (scoped role queries)
     await expect(eventCard.getByRole('heading')).toBeVisible();
-    await expect(eventCard.getByRole('img')).toBeVisible();
+    await expect(eventCard.getByRole('img', { name: /Cover photo from/ })).toBeVisible();
   });
 
-  test('React Native Conference 2024 event page displays correctly', async ({ page }) => {
+  test('RNLConf 2024 photobooth event page displays correctly', async ({ page }) => {
     await page.goto('/events/react-native-conf-2024');
 
     // Check event title (using getByRole)
-    await expect(page.getByRole('heading', { name: /React Native Photobooth/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /RNLConf 2024 Photobooth/i })).toBeVisible();
 
     // Check breadcrumb navigation (using getByRole with accessible name)
     const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' });
     await expect(breadcrumb).toBeVisible();
-    await expect(breadcrumb.getByRole('link', { name: 'Index' })).toHaveAttribute('href', '/');
+    await expect(breadcrumb.getByRole('link', { name: 'All events' })).toHaveAttribute(
+      'href',
+      '/#events'
+    );
 
     // Check metadata is displayed (using getByText for visible content)
     await expect(page.getByText('London, UK')).toBeVisible();
-    await expect(page.getByText(`${TEST_EVENT_PHOTO_COUNT} frames`)).toBeVisible();
+    await expect(page.getByText(`${TEST_EVENT_PHOTO_COUNT} photos`)).toBeVisible();
   });
 
   test('event page displays all photos', async ({ page }) => {
@@ -74,13 +79,41 @@ test.describe('Event Gallery', () => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   });
 
-  test('frame count displays on event card', async ({ page }) => {
+  test('photo count displays on event card', async ({ page }) => {
     await page.goto('/');
 
     const eventCard = page.getByRole('article').first();
 
-    // Look for frame count text (using getByText)
-    await expect(eventCard.getByText(/\d+ frames?/i)).toBeVisible();
+    // Look for photo count text (using getByText)
+    await expect(eventCard.getByText(/^\d+ photos?$/i)).toBeVisible();
+  });
+
+  test('home page opens on selected photographs that link to their frame', async ({ page }) => {
+    await page.goto('/');
+
+    const wall = page.getByRole('list', { name: 'Selected photographs' });
+    await expect(wall).toBeVisible();
+
+    const firstSelect = wall.getByRole('link').first();
+    await expect(firstSelect).toHaveAttribute('href', /^\/events\/[^/]+\/#photo-\d+$/);
+  });
+
+  test('events are grouped by year, newest first', async ({ page }) => {
+    await page.goto('/');
+
+    const years = page.getByRole('heading', { level: 3, name: /^\d{4}$/ });
+    const labels = await years.allTextContents();
+    const numbers = labels.map((label) => parseInt(label, 10));
+    expect(numbers.length).toBeGreaterThan(1);
+    expect(numbers).toEqual([...numbers].sort((a, b) => b - a));
+  });
+
+  test('event page links to the neighbouring events', async ({ page }) => {
+    await page.goto('/events/react-advanced-meetup-may-2023');
+
+    const more = page.getByRole('navigation', { name: 'More events' });
+    await expect(more.getByRole('link', { name: /Older/ })).toBeVisible();
+    await expect(more.getByRole('link', { name: /Newer/ })).toBeVisible();
   });
 
   test('masthead persists across client-side navigation', async ({ page }) => {
@@ -132,14 +165,20 @@ test.describe('Image variant selection', () => {
     await page.setViewportSize({ width: 1920, height: 1080 });
     await page.goto('/');
 
-    const cover = page.getByRole('article').first().getByRole('img');
+    const cover = page
+      .getByRole('article')
+      .first()
+      .getByRole('img', { name: /Cover photo from/ });
+    // The index sits below the selects wall and its covers are lazy, so
+    // bring it into view (Firefox only loads lazy images near the viewport)
+    await cover.scrollIntoViewIfNeeded();
     await expect(cover).toBeVisible();
 
     const { rendered, dpr } = await cover.evaluate((el) => ({
       rendered: el.getBoundingClientRect().width,
       dpr: window.devicePixelRatio,
     }));
-    const expected = expectedVariant(RESPONSIVE_WIDTHS.cover, rendered, dpr);
+    const expected = expectedVariant(RESPONSIVE_WIDTHS.grid, rendered, dpr);
 
     await expect
       .poll(async () => cover.evaluate((el: HTMLImageElement) => el.currentSrc))

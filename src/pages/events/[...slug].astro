@@ -1,30 +1,35 @@
 ---
-import { getCollection, render } from 'astro:content';
+import { render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PhotoGrid from '../../components/PhotoGrid.astro';
 import { getImageUrl } from '../../lib/images';
-import { rollMap } from '../../lib/rolls';
+import {
+  getSortedEvents,
+  formatLongDate,
+  formatMonthYear,
+  meaningfulDescription,
+  photoCountLabel,
+  type EventEntry,
+} from '../../lib/events';
 
 export async function getStaticPaths() {
-  const events = await getCollection('events');
-  const rolls = rollMap(events);
-  return events.map((event) => ({
+  const events = await getSortedEvents();
+  return events.map((event, i) => ({
     params: { slug: event.id },
-    props: { event, rollNo: rolls.get(event.id) ?? '' },
+    props: {
+      event,
+      // Newest first: the next one along the list is the older event
+      newer: events[i - 1] as EventEntry | undefined,
+      older: events[i + 1] as EventEntry | undefined,
+    },
   }));
 }
 
-const { event, rollNo } = Astro.props;
+const { event, newer, older } = Astro.props;
 const { Content } = await render(event);
 
-const formattedDate = event.data.date.toLocaleDateString('en-GB', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-});
-
 const photos = event.data.photos || [];
-// OG image: use a larger size for social sharing
+const description = meaningfulDescription(event);
 const ogImageUrl = getImageUrl(event.data.cover, {
   width: 1200,
   height: 630,
@@ -40,67 +45,78 @@ const ogImageUrl = getImageUrl(event.data.cover, {
   ogImage={ogImageUrl}
   ogImageAlt={`Cover photo from ${event.data.title} at ${event.data.location}`}
 >
-  <Fragment slot="head">
-    <!-- Grotesk only renders in event prose, so only event pages pay for it -->
-    <link
-      rel="preload"
-      href="/fonts/SchibstedGrotesk-Variable.woff2"
-      as="font"
-      type="font/woff2"
-      crossorigin
-    />
-  </Fragment>
-
   <article class="event-page">
-    <header class="event-header container">
-      <nav class="breadcrumb apparatus" aria-label="Breadcrumb">
-        <a href="/">Index</a>
+    <header class="event-header frame">
+      <nav class="breadcrumb label" aria-label="Breadcrumb">
+        <a href="/#events">All events</a>
         <span aria-hidden="true">/</span>
         <span aria-current="page">{event.data.title}</span>
       </nav>
 
-      <div class="roll-head">
-        <p class="roll-no">{rollNo}</p>
+      <h1 class="event-title display">{event.data.title}</h1>
 
-        <div class="roll-body">
-          <h1>{event.data.title}</h1>
-
-          <p class="event-meta apparatus">
-            <span class="event-location">{event.data.location}</span>
-            <span aria-hidden="true">&middot;</span>
-            <time datetime={event.data.date.toISOString()}>{formattedDate}</time>
-            {
-              photos.length > 0 && (
-                <>
-                  <span aria-hidden="true">&middot;</span>
-                  <span>
-                    {photos.length} frame{photos.length === 1 ? '' : 's'}
-                  </span>
-                </>
-              )
-            }
-          </p>
-
-          {event.data.description && <p class="event-description">{event.data.description}</p>}
-
-          <div class="event-content">
-            <Content />
-          </div>
+      <div class="event-sub">
+        <p class="event-meta">
+          <span>{event.data.location}</span>
+          <span aria-hidden="true">&middot;</span>
+          <time datetime={event.data.date.toISOString().slice(0, 10)}>
+            {formatLongDate(event.data.date)}
+          </time>
+          {
+            photos.length > 0 && (
+              <>
+                <span aria-hidden="true">&middot;</span>
+                <span>{photoCountLabel(photos.length)}</span>
+              </>
+            )
+          }
+        </p>
+        {description && <p class="event-description">{description}</p>}
+        <div class="event-content">
+          <Content />
         </div>
+        {
+          photos.length > 0 && (
+            <p class="event-hint label">
+              Spotted yourself? Open a photo to save it full size or copy a link to it.
+            </p>
+          )
+        }
       </div>
     </header>
 
     {
       photos.length > 0 ? (
-        <div class="contact-sheet container">
-          <div class="sheet-strip apparatus">
-            <span class="sheet-label">Contact sheet</span>
-            <span class="sheet-roll">{rollNo}</span>
-          </div>
-          <PhotoGrid photos={photos} eventTitle={event.data.title} />
-        </div>
+        <PhotoGrid photos={photos} eventTitle={event.data.title} />
       ) : (
-        <p class="no-photos container">Frames pending development.</p>
+        <p class="no-photos frame">Photos from this event are on their way.</p>
+      )
+    }
+
+    {
+      (newer || older) && (
+        <nav class="sequence frame" aria-label="More events">
+          {older ? (
+            <a href={`/events/${older.id}/`} class="sequence-link sequence-older">
+              <span class="label">Older</span>
+              <span class="sequence-title display">{older.data.title}</span>
+              <span class="label">
+                {older.data.location.split(',')[0]}, {formatMonthYear(older.data.date)}
+              </span>
+            </a>
+          ) : (
+            <span />
+          )}
+          {newer && (
+            <a href={`/events/${newer.id}/`} class="sequence-link sequence-newer">
+              <span class="label">Newer</span>
+              <span class="sequence-title display">{newer.data.title}</span>
+              <span class="label">
+                {newer.data.location.split(',')[0]}, {formatMonthYear(newer.data.date)}
+              </span>
+            </a>
+          )}
+        </nav>
       )
     }
   </article>
@@ -115,6 +131,7 @@ const ogImageUrl = getImageUrl(event.data.cover, {
       name: event.data.title,
       description: event.data.description || `Photos from ${event.data.title}`,
       datePublished: event.data.date.toISOString(),
+      creator: { '@type': 'Person', name: 'Marcel Cutts' },
       location: {
         '@type': 'Place',
         name: event.data.location,
@@ -126,23 +143,26 @@ const ogImageUrl = getImageUrl(event.data.cover, {
 
 <style>
   .event-header {
-    padding-top: clamp(1.5rem, 4vw, 2.75rem);
+    padding-top: clamp(1rem, 3vw, 2.25rem);
+    padding-bottom: clamp(1.25rem, 3vw, 2.25rem);
   }
 
   .breadcrumb {
     display: flex;
     align-items: baseline;
-    gap: 0.6em;
-    margin-bottom: clamp(1.75rem, 4vw, 3rem);
-    color: var(--bone-soft);
+    gap: 0.5em;
+    min-width: 0;
   }
 
   .breadcrumb a {
-    transition: color 160ms ease;
+    color: var(--text);
+    text-decoration: underline;
+    text-decoration-color: var(--line-strong);
+    text-underline-offset: 0.2em;
   }
 
   .breadcrumb a:hover {
-    color: var(--vermilion);
+    text-decoration-color: var(--signal);
   }
 
   .breadcrumb [aria-current='page'] {
@@ -151,134 +171,112 @@ const ogImageUrl = getImageUrl(event.data.cover, {
     white-space: nowrap;
   }
 
-  /* Roll header on the rail, mirroring the parent section anatomy */
-  .roll-head {
-    display: grid;
-    grid-template-columns: var(--rail) minmax(0, 1fr);
-    column-gap: clamp(1rem, 3vw, 2.5rem);
+  .event-title {
+    margin-top: clamp(1.25rem, 4vw, 3rem);
+    font-size: clamp(3rem, 8vw, 7.5rem);
+    max-width: 14ch;
   }
 
-  .roll-no {
-    grid-column: 1;
-    font-family: var(--mono);
-    font-size: 0.95rem;
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    color: var(--vermilion);
-    padding-top: 0.55em;
+  .event-sub {
+    margin-top: clamp(1rem, 2vw, 1.5rem);
+    max-width: var(--measure);
   }
 
-  .roll-no::after {
-    content: '';
-    display: block;
-    width: 1.75rem;
-    height: 1px;
-    margin-top: 0.6rem;
-    background: var(--rule-faint);
-  }
+  /* Wide screens: details sit beside the title so the photos start sooner */
+  @media (min-width: 1100px) {
+    .event-header {
+      display: grid;
+      grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+      align-items: end;
+      column-gap: clamp(2rem, 5vw, 5rem);
+    }
 
-  .roll-body {
-    grid-column: 2;
-    min-width: 0;
-  }
+    .breadcrumb {
+      grid-column: 1 / -1;
+    }
 
-  h1 {
-    font-family: var(--serif);
-    font-weight: 400;
-    font-size: clamp(2.6rem, 6vw, 4rem);
-    line-height: 1.02;
-    letter-spacing: -0.01em;
+    .event-sub {
+      margin-top: 0;
+      padding-bottom: 0.4rem;
+    }
   }
 
   .event-meta {
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0.6em;
-    margin-top: var(--space-sm);
-    color: var(--bone-soft);
+    gap: 0 0.5em;
+    font-size: clamp(1rem, 1.3vw, 1.125rem);
+    font-stretch: 87.5%;
+    font-weight: 560;
   }
 
-  .event-description {
-    margin-top: var(--space-md);
-    max-width: var(--measure);
-    font-size: 1.04rem;
-    color: var(--bone-soft);
-  }
-
-  .event-content {
-    margin-top: var(--space-sm);
-  }
-
+  .event-description,
   .event-content :global(p) {
-    max-width: var(--measure);
-    font-size: 1.04rem;
-    line-height: 1.65;
-    color: var(--bone-soft);
+    margin-top: 0.75rem;
+    font-size: 1.0625rem;
+    color: var(--text-soft);
   }
 
-  .event-content :global(p + p) {
-    margin-top: var(--space-sm);
-  }
-
-  /* Markdown-authored bodies (the collection glob accepts .md); the global
-     `a { color: inherit }` reset would otherwise leave these unmarked */
   .event-content :global(a) {
-    color: var(--vermilion);
+    color: var(--text);
     text-decoration: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 0.18em;
-    text-decoration-color: var(--rule);
-    transition: text-decoration-color 160ms ease;
+    text-decoration-color: var(--signal);
+    text-underline-offset: 0.2em;
   }
 
-  .event-content :global(a:hover) {
-    text-decoration-color: var(--vermilion);
-  }
-
-  .contact-sheet {
-    margin-top: clamp(1.75rem, 4vw, 3rem);
-  }
-
-  .sheet-strip {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--space-sm);
-    padding-top: 0.7rem;
-    border-top: 1px solid var(--rule);
-    font-weight: 500;
-    color: var(--bone);
-  }
-
-  .sheet-roll {
-    font-weight: 400;
-    color: var(--bone-faint);
+  .event-hint {
+    margin-top: 1rem;
   }
 
   .no-photos {
-    font-family: var(--mono);
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.09em;
-    color: var(--bone-soft);
-    /* padding-block only: the shorthand would zero .container's gutter */
-    padding-block: var(--space-xl);
+    padding-block: 3rem;
+    color: var(--text-soft);
   }
 
-  @media (max-width: 720px) {
-    .roll-head {
+  /* ---- Older / newer ---- */
+
+  .sequence {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-top: clamp(3rem, 8vw, 6rem);
+  }
+
+  .sequence-link {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--line-strong);
+    transition: border-color 160ms ease;
+  }
+
+  .sequence-newer {
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  .sequence-link:hover {
+    border-top-color: var(--signal);
+  }
+
+  .sequence-title {
+    font-size: clamp(1.5rem, 3.5vw, 3rem);
+    font-weight: 740;
+  }
+
+  @media (max-width: 599px) {
+    .sequence {
       grid-template-columns: minmax(0, 1fr);
     }
 
-    .roll-no {
-      grid-column: 1;
-      padding-top: 0;
-      margin-bottom: 0.75rem;
+    .sequence > span:empty {
+      display: none;
     }
 
-    .roll-body {
-      grid-column: 1;
+    .sequence-newer {
+      align-items: flex-start;
+      text-align: left;
     }
   }
 </style>

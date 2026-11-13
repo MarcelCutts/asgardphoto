@@ -52,7 +52,7 @@ test.describe('Responsive Images', () => {
 
     // Using getByRole for semantic image query within article
     const eventCard = page.getByRole('article').first();
-    const coverImg = eventCard.getByRole('img');
+    const coverImg = eventCard.getByRole('img', { name: /Cover photo from/ });
     await expect(coverImg).toBeVisible();
 
     // Should be lazy loaded
